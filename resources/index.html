@@ -1146,10 +1146,10 @@
                 <table class="deadlines-table">
                     <thead>
                         <tr>
-                            <th style="width: 10%;">Inizio Lavori</th>
-                            <th style="width: 10%;">Data Scadenza</th>
-                            <th style="width: 38%;">Descrizione</th>
-                            <th style="width: 32%;">Note</th>
+                            <th style="width: 15%;">Data Evento</th>
+                            <th style="width: 15%;">Data Scadenza</th>
+                            <th style="width: 60%;">Descrizione</th>
+                            <!-- <th style="width: 32%;">Note</th> -->
                             <th style="width: 10%; text-align: center;">Azioni</th>
                         </tr>
                     </thead>
@@ -1282,25 +1282,31 @@
             constructor() {
                 this.viewStartDate = new Date();
                 this.datePickerDate = new Date();
-                this.events = this.loadEvents();
-                this.deadlines = this.loadDeadlines(); // Load Deadlines
+                this.events = [];
+                this.deadlines = [];
                 this.holidays = {};
                 this._scrollTimer = null;
                 this.draggedEventData = null;
                 this.lastDeletedEvent = null;
-                this.showSunday = localStorage.getItem('agendaShowSunday') !== 'false';
-                this.showSaturday = localStorage.getItem('agendaShowSaturday') !== 'false';
-                this.visibleWeeks = parseInt(localStorage.getItem('agendaVisibleWeeks')) || 2;
+                this.showSunday = true;
+                this.showSaturday = true;
+                this.visibleWeeks = 2;
 
                 // Toggle view: 'calendar' or 'deadlines'
                 this.currentMainView = 'calendar';
 
                 this.handleClickOutsideDatePicker = this.handleClickOutsideDatePicker.bind(this);
                 this.popoverElement = document.getElementById('eventPopover');
-                this.init();
+
             }
 
-            init() {
+            async init() {
+                this.events = await this.loadEvents();
+                this.deadlines = await this.loadDeadlines(); // Load Deadlines
+                this.showSunday = await storageGet('agendaShowSunday') !== 'false';
+                this.showSaturday = await storageGet('agendaShowSaturday') !== 'false';
+                this.visibleWeeks = parseInt(await storageGet('agendaVisibleWeeks')) || 2;
+
                 this.setStartDateToCurrentWeek();
                 document.getElementById('toggleSunday').checked = this.showSunday;
                 document.getElementById('toggleSaturday').checked = this.showSaturday;
@@ -1322,15 +1328,15 @@
                 this.viewStartDate.setHours(0, 0, 0, 0);
             }
 
-            loadEvents() { return JSON.parse(localStorage.getItem('agendaEvents')) || {}; }
-            saveEvents() { localStorage.setItem('agendaEvents', JSON.stringify(this.events)); }
+            async loadEvents() { return JSON.parse(await storageGet('agendaEvents')) || {}; }
+            async saveEvents() { await storageSet('agendaEvents', JSON.stringify(this.events)); }
 
             // --- DEADLINES METHODS ---
-            loadDeadlines() { return JSON.parse(localStorage.getItem('agendaDeadlines')) || []; }
-            saveDeadlines() { localStorage.setItem('agendaDeadlines', JSON.stringify(this.deadlines)); }
+            async loadDeadlines() { return JSON.parse(await storageGet('agendaDeadlines')) || []; }
+            async saveDeadlines() { await storageSet('agendaDeadlines', JSON.stringify(this.deadlines)); }
 
-            loadRecurringNotes() { document.getElementById('editableNotes').value = localStorage.getItem('agendaRecurringNotes') || ''; }
-            saveRecurringNotes() { localStorage.setItem('agendaRecurringNotes', document.getElementById('editableNotes').value); }
+            async loadRecurringNotes() { document.getElementById('editableNotes').value = await storageGet('agendaRecurringNotes') || ''; }
+            async saveRecurringNotes() { await storageSet('agendaRecurringNotes', document.getElementById('editableNotes').value); }
 
             getItalianHolidays(year) {
                 const holidays = new Map(); const pad = (num) => String(num).padStart(2, '0');
@@ -1488,7 +1494,7 @@
                         <td>${formatDate(item.startDate)}</td>
                         <td>${formatDate(item.dueDate)}</td>
                         <td class="deadline-desc">${item.desc}</td>
-                        <td class="deadline-note">${noteText}</td>
+                        <!--<td class="deadline-note">${noteText}</td>-->
                         <td class="deadline-actions">
                             <button class="btn-icon edit" onclick="app.editDeadline(${item.id})" title="Modifica"><i class="bi bi-pencil-square"></i></button>
                             <button class="btn-icon delete" onclick="app.deleteDeadline(${item.id})" title="Elimina"><i class="bi bi-trash3"></i></button>
@@ -1563,9 +1569,9 @@
             editDeadline(id) { this.openDeadlineModal(id); }
             // --- END DEADLINES ---
 
-            toggleViewMode() {
+            async toggleViewMode() {
                 this.visibleWeeks = this.visibleWeeks === 2 ? 4 : 2;
-                localStorage.setItem('agendaVisibleWeeks', this.visibleWeeks);
+                await storageSet('agendaVisibleWeeks', this.visibleWeeks);
                 this.updateViewModeIcon();
                 this.renderCalendar(true);
             }
@@ -1727,7 +1733,7 @@
             }
 
             openModalForEdit(dateKey, index) {
-                const event = this.events[dateKey][index]; this.openModal(dateKey); document.getElementById('modalTitle').textContent = 'Modifica Task';
+                const event = this.events[dateKey][index]; this.openModal(dateKey); document.getElementById('modalTitle').textContent = 'Modifica Evento';
                 document.getElementById('eventTitle').value = event.title; document.getElementById('eventDescription').value = event.description || '';
                 document.querySelector(`input[name="eventType"][value="${event.type}"]`).checked = true;
                 document.getElementById('editingEventKey').value = dateKey; document.getElementById('editingEventIndex').value = index;
@@ -1812,8 +1818,8 @@
 
             setupEventListeners() {
                 document.getElementById('currentMonth').addEventListener('click', () => this.toggleDatePicker());
-                document.getElementById('toggleSunday').addEventListener('change', (e) => { this.showSunday = e.target.checked; localStorage.setItem('agendaShowSunday', this.showSunday); this.renderCalendar(); });
-                document.getElementById('toggleSaturday').addEventListener('change', (e) => { this.showSaturday = e.target.checked; localStorage.setItem('agendaShowSaturday', this.showSaturday); this.renderCalendar(); });
+                document.getElementById('toggleSunday').addEventListener('change', async (e) => { this.showSunday = e.target.checked; await storageSet('agendaShowSunday', this.showSunday); this.renderCalendar(); });
+                document.getElementById('toggleSaturday').addEventListener('change', async (e) => { this.showSaturday = e.target.checked; await storageSet('agendaShowSaturday', this.showSaturday); this.renderCalendar(); });
 
                 document.getElementById('eventForm').addEventListener('submit', (e) => {
                     e.preventDefault();
@@ -1893,12 +1899,13 @@
         }
 
         const app = new AgendaApp();
+        app.init();
 
         function closeModal() { app.closeModal(); }
         function nextWeek() { app.nextWeek(); }
         function previousWeek() { app.previousWeek(); }
         function goToToday() { app.goToToday(); }
-        function toggleViewMode() { app.toggleViewMode(); }
+        async function toggleViewMode() { await app.toggleViewMode(); }
 
         window.app = {
             deleteEvent: (event, dateKey, index) => app.deleteEvent(event, dateKey, index),
@@ -1909,70 +1916,79 @@
             editDeadline: (id) => app.editDeadline(id)
         };
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const events = JSON.parse(localStorage.getItem('agendaEvents')) || {};
+        window.addEventListener('DOMContentLoaded', async () => {
+            const events = JSON.parse(await storageGet('agendaEvents')) || {};
             let needsSave = false;
             for (const dateKey in events) {
                 events[dateKey].forEach(event => { if (typeof event.text !== 'undefined' && typeof event.title === 'undefined') { event.title = event.text; delete event.text; event.description = ''; needsSave = true; } });
             }
-            if (needsSave) { localStorage.setItem('agendaEvents', JSON.stringify(events)); app.events = events; }
+            if (needsSave) { await storageSet('agendaEvents', JSON.stringify(events)); app.events = events; }
 
             app.renderCalendar();
 
             const header = document.getElementById('mainHeader');
             const icon = document.querySelector('#headerToggleBtn i');
-            const isHeaderCollapsed = localStorage.getItem('agendaHeaderCollapsed') === 'true';
+            const isHeaderCollapsed = await storageGet('agendaHeaderCollapsed') === 'true';
 
             if (isHeaderCollapsed) { header.classList.add('collapsed'); icon.classList.remove('bi-chevron-compact-up'); icon.classList.add('bi-chevron-compact-down'); }
 
-            document.getElementById('headerToggleBtn').addEventListener('click', () => {
+            document.getElementById('headerToggleBtn').addEventListener('click', async () => {
                 header.classList.toggle('collapsed');
                 const isCollapsed = header.classList.contains('collapsed');
-                localStorage.setItem('agendaHeaderCollapsed', isCollapsed);
+                await storageSet('agendaHeaderCollapsed', isCollapsed);
                 if (isCollapsed) { icon.classList.remove('bi-chevron-compact-up'); icon.classList.add('bi-chevron-compact-down'); } else { icon.classList.remove('bi-chevron-compact-down'); icon.classList.add('bi-chevron-compact-up'); }
             });
         });
 
-        function exportData() {
-            const data = {
-                events: JSON.parse(localStorage.getItem('agendaEvents') || '{}'),
-                deadlines: JSON.parse(localStorage.getItem('agendaDeadlines') || '[]'),
-                notes: localStorage.getItem('agendaRecurringNotes') || '',
-                sundayPref: localStorage.getItem('agendaShowSunday'),
-                saturdayPref: localStorage.getItem('agendaShowSaturday'),
-                headerPref: localStorage.getItem('agendaHeaderCollapsed'),
-                visibleWeeksPref: localStorage.getItem('agendaVisibleWeeks')
-            };
 
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 4));
-            const downloadAnchorNode = document.createElement('a');
-            const date = new Date().toISOString().slice(0, 10);
+        async function exportData() {
+            try {
+                const data = {
+                    events: JSON.parse(await storageGet('agendaEvents') || '{}'),
+                    deadlines: JSON.parse(await storageGet('agendaDeadlines') || '[]'),
+                    notes: await storageGet('agendaRecurringNotes') || '',
+                    sundayPref: await storageGet('agendaShowSunday'),
+                    saturdayPref: await storageGet('agendaShowSaturday'),
+                    headerPref: await storageGet('agendaHeaderCollapsed'),
+                    visibleWeeksPref: await storageGet('agendaVisibleWeeks')
+                };
 
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", `agenda_backup_${date}.json`);
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
+                const date = new Date().toISOString().slice(0, 10);
+                const entry = await Neutralino.os.showSaveDialog('Esporta Dati', {
+                    defaultPath: `agenda_backup_${date}.json`,
+                    /*filters: [
+                        { name: 'JSON files', extensions: ['json'] }
+                    ]*/
+                });
+
+                if (entry) {
+                    await Neutralino.filesystem.writeFile(entry, JSON.stringify(data, null, 4));
+                    await Neutralino.os.showMessageBox('Esportazione completata', 'I dati sono stati esportati correttamente.', 'OK', 'INFO');
+                }
+            } catch (err) {
+                console.error("Export error:", err);
+                await Neutralino.os.showMessageBox('Errore Esportazione', 'Si è verificato un errore durante il salvataggio del file.', 'OK', 'ERROR');
+            }
         }
 
-        function importData(input) {
+        async function importData(input) {
             const file = input.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function (e) {
+            reader.onload = async function (e) {
                 try {
                     const data = JSON.parse(e.target.result);
                     if (!data.events && typeof data.notes === 'undefined') { throw new Error("Formato file non valido"); }
 
                     if (confirm("Attenzione: l'importazione sovrascriverà i dati attuali. Vuoi procedere?")) {
-                        if (data.events) localStorage.setItem('agendaEvents', JSON.stringify(data.events));
-                        if (data.deadlines) localStorage.setItem('agendaDeadlines', JSON.stringify(data.deadlines));
-                        if (data.notes !== undefined) localStorage.setItem('agendaRecurringNotes', data.notes);
-                        if (data.sundayPref !== undefined) localStorage.setItem('agendaShowSunday', data.sundayPref);
-                        if (data.saturdayPref !== undefined) localStorage.setItem('agendaShowSaturday', data.saturdayPref);
-                        if (data.headerPref !== undefined) localStorage.setItem('agendaHeaderCollapsed', data.headerPref);
-                        if (data.visibleWeeksPref !== undefined) localStorage.setItem('agendaVisibleWeeks', data.visibleWeeksPref);
+                        if (data.events) await storageSet('agendaEvents', JSON.stringify(data.events));
+                        if (data.deadlines) await storageSet('agendaDeadlines', JSON.stringify(data.deadlines));
+                        if (data.notes !== undefined) await storageSet('agendaRecurringNotes', data.notes);
+                        if (data.sundayPref !== undefined) await storageSet('agendaShowSunday', data.sundayPref);
+                        if (data.saturdayPref !== undefined) await storageSet('agendaShowSaturday', data.saturdayPref);
+                        if (data.headerPref !== undefined) await storageSet('agendaHeaderCollapsed', data.headerPref);
+                        if (data.visibleWeeksPref !== undefined) await storageSet('agendaVisibleWeeks', data.visibleWeeksPref);
                         location.reload();
                     }
                 } catch (err) {
