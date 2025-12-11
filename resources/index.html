@@ -31,7 +31,7 @@
             color: #198754;
         }
 
-        .color-recurring2 {
+        .color-recurring {
             color: black;
         }
 
@@ -477,7 +477,7 @@
             border-left-color: #198754;
         }
 
-        .event.recurring2 {
+        .event.recurring {
             background-color: #e2e3e5;
             color: black;
             border-left-color: #6c757d;
@@ -1200,8 +1200,8 @@
                                 Confermato</label>
                         </div>
                         <div class="radio-option radio-recurring-event">
-                            <input type="radio" id="type-recurring2" name="eventType" value="recurring2">
-                            <label for="type-recurring2" style="color: #5e6368;"><i class="bi bi-arrow-repeat"></i>
+                            <input type="radio" id="type-recurring" name="eventType" value="recurring">
+                            <label for="type-recurring" style="color: #5e6368;"><i class="bi bi-arrow-repeat"></i>
                                 Ricorrente</label>
                         </div>
                     </div>
@@ -1548,10 +1548,15 @@
 
                 if (id) {
                     const index = this.deadlines.findIndex(d => d.id == id);
-                    if (index !== -1) this.deadlines[index] = newDeadline;
+                    if (index !== -1) {
+                        this.removeDeadlineEvent(this.deadlines[index]); // Remove old event
+                        this.deadlines[index] = newDeadline;
+                    }
                 } else {
                     this.deadlines.push(newDeadline);
                 }
+
+                this.addDeadlineEvent(newDeadline); // Add new/updated event
 
                 this.saveDeadlines();
                 this.renderDeadlines();
@@ -1560,9 +1565,64 @@
 
             deleteDeadline(id) {
                 if (confirm("Sei sicuro di voler eliminare questa scadenza?")) {
+                    const deadline = this.deadlines.find(d => d.id === id);
+                    if (deadline) {
+                        this.removeDeadlineEvent(deadline); // Remove event
+                    }
                     this.deadlines = this.deadlines.filter(d => d.id !== id);
                     this.saveDeadlines();
                     this.renderDeadlines();
+                }
+            }
+
+            addDeadlineEvent(deadline) {
+                const dateKey = deadline.startDate;
+                if (!dateKey) return;
+
+                if (!this.events[dateKey]) this.events[dateKey] = [];
+
+                const newEvent = {
+                    title: deadline.desc,
+                    description: deadline.notes || '',
+                    type: 'recurring',
+                    deadlineId: deadline.id // Link to deadline
+                };
+
+                this.events[dateKey].push(newEvent);
+                this.saveEvents();
+                this.renderCalendar();
+            }
+
+            removeDeadlineEvent(deadline) {
+                // Try finding by date first
+                let dateKey = deadline.startDate;
+                let found = false;
+
+                if (dateKey && this.events[dateKey]) {
+                    const index = this.events[dateKey].findIndex(e => e.deadlineId === deadline.id);
+                    if (index !== -1) {
+                        this.events[dateKey].splice(index, 1);
+                        if (this.events[dateKey].length === 0) delete this.events[dateKey];
+                        found = true;
+                    }
+                }
+
+                // If not found (maybe date changed or data inconsistency), scan all events
+                if (!found) {
+                    for (const dKey in this.events) {
+                        const index = this.events[dKey].findIndex(e => e.deadlineId === deadline.id);
+                        if (index !== -1) {
+                            this.events[dKey].splice(index, 1);
+                            if (this.events[dKey].length === 0) delete this.events[dKey];
+                            found = true;
+                            break; // Assume one event per deadline
+                        }
+                    }
+                }
+
+                if (found) {
+                    this.saveEvents();
+                    this.renderCalendar();
                 }
             }
 
@@ -1602,7 +1662,7 @@
             getEventsForDate(date) {
                 const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                 const dayEvents = this.events[dateKey] ? [...this.events[dateKey]] : [];
-                const typeSortOrder = { 'urgent': 1, 'normal': 2, 'pending': 3, 'recurring2': 4, 'confirmed': 5 };
+                const typeSortOrder = { 'urgent': 1, 'normal': 2, 'pending': 3, 'recurring': 4, 'confirmed': 5 };
                 dayEvents.sort((a, b) => { const orderA = typeSortOrder[a.type] || 99; const orderB = typeSortOrder[b.type] || 99; return orderA - orderB; });
                 return dayEvents;
             }
@@ -1652,7 +1712,7 @@
                 const dayEvents = this.getEventsForDate(actualDate);
 
                 if (dayEvents) {
-                    const typeIcons = { 'normal': 'bi-calendar4-event color-normal', 'urgent': 'bi-exclamation-triangle-fill color-urgent', 'pending': 'bi-hourglass-split color-pending', 'confirmed': 'bi-check-circle-fill color-confirmed', 'recurring2': 'bi-arrow-repeat color-recurring2', };
+                    const typeIcons = { 'normal': 'bi-calendar4-event color-normal', 'urgent': 'bi-exclamation-triangle-fill color-urgent', 'pending': 'bi-hourglass-split color-pending', 'confirmed': 'bi-check-circle-fill color-confirmed', 'recurring': 'bi-arrow-repeat color-recurring', };
                     dayEvents.forEach((event, index) => {
                         const eventDiv = document.createElement('div');
                         let finalClass = `event ${event.type}`; eventDiv.className = finalClass;
@@ -1746,12 +1806,12 @@
 
             addEvent(title, description, type, dateKey) {
                 if (!this.events[dateKey]) this.events[dateKey] = [];
-                const newEvent = { title, description, type, completed: false };
+                const newEvent = { title, description, type };
                 this.events[dateKey].push(newEvent); this.saveEvents(); this.renderCalendar();
             }
 
             updateEvent(oldDateKey, index, newTitle, newDescription, newType, newDateKey) {
-                const eventToUpdate = { title: newTitle, description: newDescription, type: newType, completed: false };
+                const eventToUpdate = { title: newTitle, description: newDescription, type: newType };
                 if (oldDateKey === newDateKey) { this.events[oldDateKey][index] = eventToUpdate; } else { this.events[oldDateKey].splice(index, 1); if (this.events[oldDateKey].length === 0) delete this.events[oldDateKey]; if (!this.events[newDateKey]) this.events[newDateKey] = []; this.events[newDateKey].push(eventToUpdate); }
                 this.saveEvents(); this.renderCalendar();
             }
