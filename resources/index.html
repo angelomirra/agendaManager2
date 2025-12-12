@@ -1717,6 +1717,7 @@
                         let finalClass = `event ${event.type}`; eventDiv.className = finalClass;
                         const eventIndex = this.events[dateKey].findIndex(e => e === event);
                         let eventDescription = event.title ? event.title.charAt(0).toUpperCase() + event.title.slice(1) : '';
+                        eventDescription = this.truncateText(eventDescription);
                         if (event.description && event.description.trim() !== '') { eventDescription += ' <i class="bi bi-chat" style="margin-left:2px; font-size:9px; opacity:0.9"></i>'; }
                         const iconClass = typeIcons[event.type] || 'bi-circle';
                         const iconHtml = `<i class="bi ${iconClass} event-type-icon"></i>`;
@@ -1749,6 +1750,12 @@
                 cell.addEventListener('dragover', (e) => { e.preventDefault(); if (this.draggedEventData && this.draggedEventData.sourceKey === dateKey) { e.dataTransfer.dropEffect = 'none'; } else { e.dataTransfer.dropEffect = 'move'; } });
                 cell.addEventListener('drop', (e) => { e.preventDefault(); cell._dragCounter = 0; cell.classList.remove('drag-over'); const data = JSON.parse(e.dataTransfer.getData('application/json')); if (data.sourceKey !== dateKey) this.moveEvent(data.sourceKey, data.sourceIndex, dateKey); });
                 container.appendChild(cell);
+            }
+
+            truncateText(text, maxLen = 75) {
+                if (!text) return '';
+                if (text.length <= maxLen) return text;
+                return text.slice(0, maxLen - 3).trimEnd() + '...';
             }
 
             hidePopover() {
