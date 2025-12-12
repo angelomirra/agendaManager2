@@ -1707,10 +1707,16 @@
                 let dayText = `${day} <span style="font-size:13px;letter-spacing: 1px;">${monthName}</span>`;
 
                 if (isOtherMonth) cell.classList.add('other-month');
-                if (holidayName) { cell.classList.add('holiday'); cell.title = holidayName; dayText += ' <i class="bi bi-star-fill"></i>'; }
+                if (holidayName) {
+                    cell.classList.add('holiday');
+                    cell.title = holidayName;
+                    dayText += ' <i class="bi bi-star-fill"></i>';
+                }
 
-                const today = new Date(); today.setHours(0, 0, 0, 0);
-                const yesterday = new Date(actualDate); yesterday.setDate(yesterday.getDate() - 1);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const yesterday = new Date(actualDate);
+                yesterday.setDate(yesterday.getDate() - 1);
 
                 if (actualDate.getTime() === today.getTime()) { cell.classList.add('today'); }
                 else {
@@ -1729,11 +1735,13 @@
                 if (actualDate.getDay() === 6) cell.classList.add('is-saturday');
 
                 const firstDayOfWeek = new Date(today); firstDayOfWeek.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
-                const lastDayOfWeek = new Date(firstDayOfWeek); lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
+                const lastDayOfWeek = new Date(firstDayOfWeek);
+                lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
                 if (actualDate >= firstDayOfWeek && actualDate <= lastDayOfWeek) cell.classList.add('current-week');
 
                 cell.innerHTML = `<div class="day-number">${dayText}</div>`;
-                const eventsContainer = document.createElement('div'); eventsContainer.className = 'events-container';
+                const eventsContainer = document.createElement('div');
+                eventsContainer.className = 'events-container';
                 const dayEvents = this.getEventsForDate(actualDate);
 
                 if (dayEvents) {
@@ -1758,23 +1766,41 @@
                             setTimeout(() => { if (document.body.contains(ghost)) { document.body.removeChild(ghost); } }, 0);
                         });
                         eventDiv.addEventListener('dragend', () => { this.draggedEventData = null; });
-                        eventDiv.addEventListener('click', (e) => { e.stopPropagation(); if (!e.target.classList.contains('delete-event')) this.openModalForEdit(dateKey, eventIndex); });
+                        eventDiv.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            if (!e.target.classList.contains('delete-event')) {
+                                this.hidePopover();
+                                this.openModalForEdit(dateKey, eventIndex);
+                            }
+                        });
                         eventDiv.addEventListener('mouseenter', (e) => { e.preventDefault(); e.stopPropagation(); this.showDescriptionPopover(event, eventDiv); });
                         eventDiv.addEventListener('mouseleave', (e) => { e.preventDefault(); e.stopPropagation(); this.hidePopover(); });
                         eventsContainer.appendChild(eventDiv);
                     });
                 }
-                const allEventsContainers = container.querySelectorAll('.events-container'); // This might be wrong logic, using local var
+
                 // Scrolling handling...
                 eventsContainer.addEventListener('wheel', (e) => { const c = e.currentTarget; if (c.scrollHeight > c.clientHeight) { e.stopPropagation(); } });
                 cell.appendChild(eventsContainer);
 
                 cell.addEventListener('dblclick', (e) => { if (e.target.closest('.event')) { return; } this.showQuickAddInput(cell, dateKey); });
                 cell._dragCounter = 0;
-                cell.addEventListener('dragenter', (e) => { e.preventDefault(); cell._dragCounter++; if (this.draggedEventData && this.draggedEventData.sourceKey === dateKey) return; cell.classList.add('drag-over'); });
-                cell.addEventListener('dragleave', (e) => { e.preventDefault(); cell._dragCounter--; if (cell._dragCounter <= 0) { cell._dragCounter = 0; cell.classList.remove('drag-over'); } });
-                cell.addEventListener('dragover', (e) => { e.preventDefault(); if (this.draggedEventData && this.draggedEventData.sourceKey === dateKey) { e.dataTransfer.dropEffect = 'none'; } else { e.dataTransfer.dropEffect = 'move'; } });
-                cell.addEventListener('drop', (e) => { e.preventDefault(); cell._dragCounter = 0; cell.classList.remove('drag-over'); const data = JSON.parse(e.dataTransfer.getData('application/json')); if (data.sourceKey !== dateKey) this.moveEvent(data.sourceKey, data.sourceIndex, dateKey); });
+                cell.addEventListener('dragenter', (e) => {
+                    e.preventDefault();
+                    cell._dragCounter++; if (this.draggedEventData && this.draggedEventData.sourceKey === dateKey) return; cell.classList.add('drag-over');
+                });
+                cell.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    cell._dragCounter--; if (cell._dragCounter <= 0) { cell._dragCounter = 0; cell.classList.remove('drag-over'); }
+                });
+                cell.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    if (this.draggedEventData && this.draggedEventData.sourceKey === dateKey) { e.dataTransfer.dropEffect = 'none'; } else { e.dataTransfer.dropEffect = 'move'; }
+                });
+                cell.addEventListener('drop', (e) => {
+                    e.preventDefault(); cell._dragCounter = 0;
+                    cell.classList.remove('drag-over'); const data = JSON.parse(e.dataTransfer.getData('application/json')); if (data.sourceKey !== dateKey) this.moveEvent(data.sourceKey, data.sourceIndex, dateKey);
+                });
                 container.appendChild(cell);
             }
 
@@ -1798,14 +1824,20 @@
                 document.body.appendChild(this.popoverElement);
                 this.popoverElement.style.display = 'block';
                 this.popoverElement.style.top = '0px'; this.popoverElement.style.left = '0px';
-                const targetRect = targetElement.getBoundingClientRect(); const popoverRect = this.popoverElement.getBoundingClientRect(); const gap = 12;
+                const targetRect = targetElement.getBoundingClientRect();
+                const popoverRect = this.popoverElement.getBoundingClientRect(); const gap = 12;
                 let top, left; const spaceOnRight = window.innerWidth - targetRect.right;
-                if (spaceOnRight > popoverRect.width + gap) { left = targetRect.right + gap; arrow.className = 'arrow left'; } else { left = targetRect.left - popoverRect.width - gap; arrow.className = 'arrow right'; }
+                if (spaceOnRight > popoverRect.width + gap) {
+                    left = targetRect.right + gap;
+                    arrow.className = 'arrow left';
+                } else { left = targetRect.left - popoverRect.width - gap; arrow.className = 'arrow right'; }
                 top = targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2);
                 if (top < 10) { top = 10; } else if (top + popoverRect.height > window.innerHeight - 10) { top = window.innerHeight - popoverRect.height - 10; }
-                const arrowTop = (targetRect.top + targetRect.height / 2) - top; const safeArrowTop = Math.max(10, Math.min(popoverRect.height - 10, arrowTop));
+                const arrowTop = (targetRect.top + targetRect.height / 2) - top;
+                const safeArrowTop = Math.max(10, Math.min(popoverRect.height - 10, arrowTop));
                 arrow.style.top = `${safeArrowTop}px`; arrow.style.transform = 'translateY(-50%)';
-                this.popoverElement.style.top = `${top + window.scrollY}px`; this.popoverElement.style.left = `${left + window.scrollX}px`;
+                this.popoverElement.style.top = `${top + window.scrollY}px`;
+                this.popoverElement.style.left = `${left + window.scrollX}px`;
             }
 
             showQuickAddInput(cell, dateKey) {
@@ -1852,15 +1884,21 @@
                 evt.stopPropagation(); if (!this.events[dateKey]?.[index]) return;
                 const eventToDelete = this.events[dateKey][index];
                 this.lastDeletedEvent = { event: { ...eventToDelete }, dateKey: dateKey };
-                this.events[dateKey].splice(index, 1); if (this.events[dateKey].length === 0) delete this.events[dateKey];
-                this.saveEvents(); this.renderCalendar(); this.hidePopover();
+                this.events[dateKey].splice(index, 1);
+                if (this.events[dateKey].length === 0) delete this.events[dateKey];
+                this.saveEvents();
+                this.renderCalendar();
+                this.hidePopover();
             }
 
             restoreLastDeletedEvent() {
                 if (!this.lastDeletedEvent) return;
                 const { event, dateKey } = this.lastDeletedEvent;
                 if (!this.events[dateKey]) { this.events[dateKey] = []; }
-                this.events[dateKey].push(event); this.lastDeletedEvent = null; this.saveEvents(); this.renderCalendar();
+                this.events[dateKey].push(event);
+                this.lastDeletedEvent = null;
+                this.saveEvents();
+                this.renderCalendar();
             }
 
             moveEvent(sourceKey, sourceIndex, targetKey) {
@@ -1868,7 +1906,9 @@
                 const eventToMove = this.events[sourceKey].splice(sourceIndex, 1)[0];
                 if (this.events[sourceKey].length === 0) delete this.events[sourceKey];
                 if (!this.events[targetKey]) this.events[targetKey] = [];
-                this.events[targetKey].push(eventToMove); this.saveEvents(); this.renderCalendar();
+                this.events[targetKey].push(eventToMove);
+                this.saveEvents();
+                this.renderCalendar();
             }
 
             toggleDatePicker() {
@@ -2042,8 +2082,12 @@
 
                 calendarGrid.addEventListener('wheel', (e) => {
                     if (this.currentMainView !== 'calendar') return;
-                    this.hidePopover(); e.preventDefault(); const now = Date.now(); if (now - this._lastScrollTime < this._scrollCooldownMs) { return; }
-                    this._wheelAcc += e.deltaY; if (this._wheelTimer) clearTimeout(this._wheelTimer);
+                    this.hidePopover();
+                    e.preventDefault();
+                    const now = Date.now();
+                    if (now - this._lastScrollTime < this._scrollCooldownMs) { return; }
+                    this._wheelAcc += e.deltaY;
+                    if (this._wheelTimer) clearTimeout(this._wheelTimer);
                     this._wheelTimer = setTimeout(() => {
                         if (this._wheelAcc <= -this._wheelThreshold) { this.previousWeek(); this._lastScrollTime = Date.now(); } else if (this._wheelAcc >= this._wheelThreshold) { this.nextWeek(); this._lastScrollTime = Date.now(); }
                         this._wheelAcc = 0; this._wheelTimer = null;
