@@ -1147,7 +1147,7 @@
         <!-- SCADENZIARIO (Nuova Sezione) -->
         <div class="deadlines-view" id="deadlinesView">
             <div class="add-deadline-btn-container">
-                <h2 style="font-size: 20px; color: #34495e;">Scadenziario e Adempimenti</h2>
+                <h2 style="font-size: 20px; color: #34495e;">Scadenziario Adempimenti</h2>
                 <button class="btn-add-deadline" onclick="app.openDeadlineModal()">
                     <i class="bi bi-plus-lg"></i> Nuova Scadenza
                 </button>
@@ -1158,7 +1158,7 @@
                         <tr>
                             <th style="width: 15%;">Data Evento</th>
                             <th style="width: 15%;">Data Scadenza</th>
-                            <th style="width: 60%;">Descrizione</th>
+                            <th style="width: 60%;">Descrizione Adempimento</th>
                             <!-- <th style="width: 32%;">Note</th> -->
                             <th style="width: 10%; text-align: center;">Azioni</th>
                         </tr>
@@ -1512,10 +1512,13 @@
                         noteText = noteText.substring(0, 80) + ' ...';
                     }
 
+                    let descText = noteText ? item.desc + ' <i class="bi bi-chat" style="margin-left:2px; font-size:9px; opacity:0.9"></i>' : item.desc;
+
+
                     tr.innerHTML = `
                         <td>${this.formatDate(item.startDate)}</td>
                         <td>${this.formatDate(item.dueDate)}</td>
-                        <td class="deadline-desc">${item.desc}</td>
+                        <td class="deadline-desc">${descText}</td>
                         <!--<td class="deadline-note">${noteText}</td>-->
                         <td class="deadline-actions">
                             <button class="btn-icon edit" onclick="app.editDeadline(${item.id})" title="Modifica"><i class="bi bi-pencil-square"></i></button>
@@ -1940,7 +1943,7 @@
                     await storageSet('agendaShowSunday', this.showSunday);
                     this.renderCalendar();
                 });
-                
+
                 document.getElementById('toggleSaturday').addEventListener('change', async (e) => {
                     const isShowing = e.target.checked;
 
