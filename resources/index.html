@@ -35,6 +35,10 @@
             color: black;
         }
 
+        .color-deadline-linked {
+            color: #914100;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
             background: #f8f9fa;
@@ -484,6 +488,13 @@
             color: black;
             border-left-color: #6c757d;
         }
+
+        .event.deadline-linked {
+            background-color: #ffe7d9;
+            border-left-color: #ff6206;
+            color: black;
+        }
+
 
         .delete-event {
             position: absolute;
@@ -1609,7 +1620,7 @@
                 const newEvent = {
                     title: deadline.desc,
                     description: deadline.notes || '',
-                    type: 'recurring',
+                    type: 'deadline-linked',
                     deadlineId: deadline.id // Link to deadline
                 };
 
@@ -1687,7 +1698,7 @@
             getEventsForDate(date) {
                 const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                 const dayEvents = this.events[dateKey] ? [...this.events[dateKey]] : [];
-                const typeSortOrder = { 'urgent': 1, 'normal': 2, 'pending': 3, 'recurring': 4, 'confirmed': 5 };
+                const typeSortOrder = { 'urgent': 1, 'normal': 2, 'pending': 3, 'recurring': 4, 'deadline-linked': 5, 'confirmed': 6 };
                 dayEvents.sort((a, b) => { const orderA = typeSortOrder[a.type] || 99; const orderB = typeSortOrder[b.type] || 99; return orderA - orderB; });
                 return dayEvents;
             }
@@ -1745,7 +1756,7 @@
                 const dayEvents = this.getEventsForDate(actualDate);
 
                 if (dayEvents) {
-                    const typeIcons = { 'normal': 'bi-calendar4-event color-normal', 'urgent': 'bi-exclamation-triangle-fill color-urgent', 'pending': 'bi-hourglass-split color-pending', 'confirmed': 'bi-check-circle-fill color-confirmed', 'recurring': 'bi-arrow-repeat color-recurring', };
+                    const typeIcons = { 'normal': 'bi-calendar4-event color-normal', 'urgent': 'bi-exclamation-triangle-fill color-urgent', 'pending': 'bi-hourglass-split color-pending', 'confirmed': 'bi-check-circle-fill color-confirmed', 'recurring': 'bi-arrow-repeat color-recurring', 'deadline-linked': 'bi-list-task color-deadline-linked' };
                     dayEvents.forEach((event, index) => {
                         const eventDiv = document.createElement('div');
                         let finalClass = `event ${event.type}`; eventDiv.className = finalClass;
