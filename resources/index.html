@@ -1608,7 +1608,7 @@
 
                 const newEvent = {
                     title: deadline.desc,
-                    description: 'DATA SCADENZA: ' + this.formatDate(deadline.dueDate) + '\n\n' + (deadline.notes || ''),
+                    description: deadline.notes || '',
                     type: 'recurring',
                     deadlineId: deadline.id // Link to deadline
                 };
