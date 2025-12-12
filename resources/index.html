@@ -1025,7 +1025,7 @@
         }
 
         .deadline-row:hover td {
-            filter: brightness(0.98);
+            filter: brightness(0.88);
         }
 
         .deadline-desc {
@@ -1478,13 +1478,18 @@
                 tbody.innerHTML = '';
 
                 // Sort by Due Date
-                const sortedDeadlines = [...this.deadlines].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+                const sortedDeadlines = [...this.deadlines].sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
 
                 sortedDeadlines.forEach((item, index) => {
                     const tr = document.createElement('tr');
                     tr.className = 'deadline-row';
+
+                    // Abilita il doppio click per modificare
+                    tr.style.cursor = 'pointer';
+                    tr.title = "Doppio click per modificare";
+                    tr.addEventListener('dblclick', () => this.editDeadline(item.id));
 
                     const startDate = new Date(item.startDate);
                     startDate.setHours(0, 0, 0, 0);
