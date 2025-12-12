@@ -177,8 +177,10 @@
             font-size: 14px;
             cursor: pointer;
             padding: 5px 10px;
-            margin-right: 5px;
+            margin-right: 15px;
             user-select: none;
+            border-radius: 4px;
+            border: solid 1px;
         }
 
         .day-toggle:hover {
@@ -996,7 +998,7 @@
         }
 
         .deadlines-table td {
-            padding: 12px 15px;
+            padding: 5px 15px;
             border-bottom: 1px solid #eee;
             color: #333;
         }
@@ -1237,7 +1239,7 @@
         </div>
     </div>
 
-    <!-- MODAL SCADENZE (Nuovo) -->
+    <!-- MODAL SCADENZE -->
     <div class="modal" id="deadlineModal">
         <div class="modal-content">
             <button class="modal-close" onclick="app.closeDeadlineModal()" aria-label="Chiudi modal">×</button>
@@ -1375,8 +1377,13 @@
                 const monthControls = document.querySelector('.month-controls');
                 const btnIcon = document.querySelector('#btnMainView i');
                 const btnText = document.getElementById('btnMainView');
+                const btnGoToToday = document.getElementById('floatingTodayBtn');
 
                 if (this.currentMainView === 'calendar') {
+
+                    // Hide Go to Today button
+                    btnGoToToday.style.display = 'none';
+
                     // Switch to Deadlines
                     this.currentMainView = 'deadlines';
                     calendarDiv.style.display = 'none';
@@ -1394,6 +1401,10 @@
                     document.getElementById('btnViewMode').style.display = 'none';
 
                 } else {
+
+                    // Show Go to Today button
+                    btnGoToToday.style.display = 'flex';
+
                     // Switch to Calendar
                     this.currentMainView = 'calendar';
                     calendarDiv.style.display = 'grid';
@@ -1914,9 +1925,23 @@
                         notes: document.getElementById('deadlineNotes').value
                     };
 
-                    // Extra safety check
+                    // Controlla che la data di scadenza non sia precedente alla data di inizio
                     if (formData.dueDate < formData.startDate) {
                         alert("La data di scadenza non può essere precedente alla data evento!");
+                        return;
+                    }
+
+                    const day = (new Date(formData.startDate)).getDay(); // 0 = Domenica, 6 = Sabato
+
+                    // Controlla se è Sabato ed è nascosto
+                    if (day === 6 && !this.showSaturday) {
+                        alert("Attenzione: Il Sabato è attualmente nascosto.\nAbilita i sabati nel calendario o scegli un'altra data.");
+                        return;
+                    }
+
+                    // Controlla se è Domenica ed è nascosta
+                    if (day === 0 && !this.showSunday) {
+                        alert("Attenzione: La Domenica è attualmente nascosta.\nAbilita le domeniche nel calendario o scegli un'altra data.");
                         return;
                     }
 
@@ -1988,7 +2013,7 @@
 
         window.app = {
             deleteEvent: (event, dateKey, index) => app.deleteEvent(event, dateKey, index),
-            toggleMainView: () => app.toggleMainView(),
+            toggleMainView: () => { app.toggleMainView() },
             openDeadlineModal: () => app.openDeadlineModal(),
             closeDeadlineModal: () => app.closeDeadlineModal(),
             deleteDeadline: (id) => app.deleteDeadline(id),
