@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Lavoro I.C.S. SpA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+    <style>
+        /* --- RESET E BASI --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            user-select: none;
+            overflow: hidden; /* Gestito dal container */
+        }
+
+        /* --- COLORI EVENTI --- */
+        .color-normal { color: #0358d8; }
+        .color-urgent { color: #dc3545; }
+        .color-pending { color: #7c6212; }
+        .color-confirmed { color: #198754; }
+        .color-recurring { color: black; }
+
+        /* --- LAYOUT PRINCIPALE --- */
+        .container {
+            position: absolute;
+            top: 5px; bottom: 5px; left: 5px; right: 5px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- HEADER --- */
+        .header {
+            background: white;
+            padding: 8px 15px;
+            padding-right: 50px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            transition: all 0.3s ease-in-out;
+            max-height: 200px;
+            opacity: 1;
+        }
+
+        .header.collapsed {
+            max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; border-bottom: none;
+        }
+
+        .toggle-bar {
+            width: 100%; height: 0; position: absolute;
+            display: flex; justify-content: right; z-index: 50;
+        }
+
+        .linguetta {
+            background: white; border: 1px solid #e9ecef; border-top: none;
+            width: 40px; height: 20px; border-radius: 0 0 10px 10px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: background 0.2s;
+        }
+        .linguetta:hover { background: #f1f1f1; }
+        .linguetta i { font-size: 18px; color: #adb5bd; font-weight: bold; }
+
+        /* --- CONTROLLI HEADER --- */
+        .month-controls { display: flex; align-items: center; flex-shrink: 0; }
+        
+        .month-controls button {
+            background: white; border: solid 1px #ced4da;
+            padding: 6px 14px; border-radius: 6px; cursor: pointer;
+            font-size: 14px; transition: all 0.2s; color: #495057;
+        }
+        .month-controls button:hover { background-color: #f1f3f5; border-color: #adb5bd; }
+
+        .day-toggle {
+            display: flex; align-items: center; color: #495057;
+            font-size: 14px; cursor: pointer; padding: 5px 10px;
+            margin-right: 10px; border-radius: 4px; border: solid 1px #ced4da;
+        }
+        .day-toggle:hover { background-color: #f8f9fa; }
+        .day-toggle input { margin-right: 6px; }
+
+        .current-month {
+            font-size: 18px; font-weight: 700; min-width: 240px;
+            text-align: center; cursor: pointer; padding: 5px 10px;
+            background: transparent; border: none !important;
+            color: #2c3e50; margin: 0 10px;
+        }
+        .current-month:hover { background-color: #f8f9fa; border-radius: 6px; }
+
+        .recurring-note {
+            background: #f8f9fa; padding: 5px 10px; border-radius: 6px;
+            display: flex; align-items: center; gap: 8px; flex: 1;
+            border: 1px solid transparent; transition: all 0.2s;
+        }
+        .recurring-note:focus-within { border-color: #3b82f6; background: white; }
+        
+        #editableNotes {
+            border: none; background: transparent; outline: none;
+            font-size: 14px; color: #2c3e50; width: 100%;
+        }
+
+        /* --- CALENDARIO GRID --- */
+        .weekday-header {
+            background-color: white; color: #64748b; font-weight: 600;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+            padding: 8px 0; margin-bottom: 2px;
+        }
+        .weekday-header.saturday { background-color: #f8f9fa; color: #666; }
+        .weekday-header.sunday { background-color: #fff1f2; color: #e11d48; }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1.5fr) 1fr 1fr;
+            grid-template-rows: auto repeat(2, 1fr);
+            gap: 1px; background: #e2e8f0;
+            flex-grow: 1; overflow: hidden;
+        }
+        .calendar-grid.rows-4 { grid-template-rows: auto repeat(4, 1fr); }
+        .calendar-grid.hide-sundays { grid-template-columns: repeat(5, 1.5fr) 1fr; }
+        .calendar-grid.hide-saturdays { grid-template-columns: repeat(5, 1.5fr) 1fr; }
+        .calendar-grid.hide-sundays.hide-saturdays { grid-template-columns: repeat(5, 1fr); }
+
+        .day-cell {
+            background: white; padding: 6px; position: relative;
+            display: flex; flex-direction: column; gap: 4px;
+            overflow: hidden; transition: transform 0.1s;
+        }
+        .day-cell.current-week { background-color: #f8fafc; }
+        .day-cell.today { background-color: #f0f9ff; border: 2px solid #0ea5e9; z-index: 2; }
+        .day-cell.is-saturday { background: #f8f9fa; }
+        .day-cell.is-sunday { background: #fff1f2; }
+        .day-cell.holiday { background: #fff1f2 !important; }
+
+        .day-number { font-size: 16px; font-weight: 600; color: #334155; margin-bottom: 2px; }
+        .day-cell.is-sunday .day-number, .day-cell.holiday .day-number { color: #e11d48; }
+        .day-cell.today .day-number { color: #0ea5e9; }
+        
+        .day-cell.first-day-of-month .day-number { color: black; }
+        .day-cell.first-day-of-month::after {
+            content: var(--content-text, 'MESE');
+            position: absolute; top: 8px; right: 8px;
+            font-size: 10px; font-weight: 700; padding: 2px 8px;
+            background: #1e293b; color: white; border-radius: 4px;
+        }
+
+        /* --- EVENTI --- */
+        .events-container {
+            flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 3px;
+        }
+        .events-container::-webkit-scrollbar { width: 3px; }
+        .events-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
+        .event {
+            padding: 4px 6px; border-radius: 4px; font-size: 11px;
+            font-weight: 500; line-height: 1.3; cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            background-color: #e0f2fe; color: #0f172a;
+            border-left: 3px solid #3b82f6; position: relative;
+            transition: all 0.1s; margin-right: 18px; /* Spazio per la X */
+        }
+        .event:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .event.urgent { background: #fee2e2; border-left-color: #ef4444; }
+        .event.pending { background: #fef9c3; border-left-color: #eab308; }
+        .event.confirmed { background: #dcfce7; border-left-color: #22c55e; }
+        .event.recurring { background: #f1f5f9; border-left-color: #64748b; }
+
+        .delete-event {
+            position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+            width: 16px; height: 16px; border-radius: 3px; border: none;
+            background: rgba(0,0,0,0.1); color: #475569;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; opacity: 0; font-size: 12px;
+        }
+        .event:hover .delete-event { opacity: 1; }
+        .delete-event:hover { background: #ef4444; color: white; }
+
+        /* --- SCADENZIARIO (Nuovo Stile) --- */
+        .deadlines-view {
+            display: none; flex-grow: 1; flex-direction: column;
+            padding: 20px 25px; background: #f8f9fa; overflow-y: auto;
+        }
+        .deadlines-view.active { display: flex; animation: fadeIn 0.3s ease-out; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .deadline-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+        }
+        .deadline-header h2 { font-size: 24px; color: #1e293b; font-weight: 700; margin-bottom: 2px; }
+        .deadline-header p { color: #64748b; font-size: 14px; }
+
+        .btn-add-deadline {
+            background-color: #0ea5e9; color: white; border: none;
+            padding: 8px 16px; border-radius: 6px; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; gap: 8px;
+            transition: background 0.2s; box-shadow: 0 2px 4px rgba(14, 165, 233, 0.2);
+        }
+        .btn-add-deadline:hover { background-color: #0284c7; transform: translateY(-1px); }
+
+        /* Controlli Scadenziario */
+        .deadline-controls {
+            display: flex; gap: 15px; margin-bottom: 20px; align-items: center;
+            background: white; padding: 12px; border-radius: 8px;
+            border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+
+        .search-box { position: relative; flex-grow: 1; }
+        .search-box i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+        
+        .search-input {
+            width: 100%; padding: 10px 10px 10px 38px;
+            border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        .search-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+
+        .filter-select {
+            padding: 10px 30px 10px 15px; border: 1px solid #cbd5e1;
+            border-radius: 6px; background-color: white; font-size: 14px;
+            cursor: pointer; min-width: 160px; outline: none;
+        }
+        .filter-select:focus { border-color: #3b82f6; }
+
+        /* Tabella Scadenziario */
+        .deadlines-table-container {
+            background: white; border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0; overflow: hidden;
+        }
+
+        .deadlines-table { width: 100%; border-collapse: collapse; }
+        
+        .deadlines-table thead th {
+            background: #f1f5f9; color: #475569; font-weight: 600;
+            text-transform: uppercase; font-size: 11px; letter-spacing: 0.8px;
+            padding: 16px 20px; text-align: left; border-bottom: 1px solid #e2e8f0;
+        }
+
+        .deadlines-table tbody tr { transition: background-color 0.15s; border-bottom: 1px solid #f1f5f9; }
+        .deadlines-table tbody tr:hover { background-color: #f8fafc; }
+        .deadlines-table tbody tr:last-child { border-bottom: none; }
+        
+        .deadlines-table td { padding: 16px 20px; vertical-align: middle; color: #334155; font-size: 14px; }
+
+        /* Badge Stati */
+        .status-badge {
+            display: inline-flex; align-items: center; padding: 4px 10px;
+            border-radius: 20px; font-size: 11px; font-weight: 600; line-height: 1;
+        }
+        .status-badge i { margin-right: 5px; font-size: 12px; }
+        
+        .status-overdue { background-color: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
+        .status-today { background-color: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; }
+        .status-warning { background-color: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+        .status-future { background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
+        .date-primary { font-weight: 600; color: #1e293b; display: block; }
+        .date-secondary { font-size: 11px; color: #94a3b8; margin-top: 2px; display: block; }
+        
+        .desc-text { font-weight: 500; display: block; margin-bottom: 4px; font-size: 15px; }
+        .notes-text { font-size: 12px; color: #64748b; max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+
+        .btn-icon {
+            width: 30px; height: 30px; border-radius: 6px; border: none;
+            display: inline-flex; align-items: center; justify-content: center;
+            transition: all 0.2s; background: transparent; cursor: pointer; color: #64748b;
+        }
+        .btn-icon:hover { background-color: #e2e8f0; color: #0f172a; }
+        .btn-icon.delete:hover { background-color: #fee2e2; color: #ef4444; }
+
+        /* --- MODALI E POPUP --- */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
+            backdrop-filter: blur(2px);
+        }
+        .modal-content {
+            background: white; padding: 25px; border-radius: 12px;
+            width: 90%; max-width: 600px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            position: relative; animation: slideIn 0.2s ease-out;
+        }
+        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .modal-header h2 { margin-bottom: 20px; color: #1e293b; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; color: #334155; font-size: 13px; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; padding: 10px; border: 1px solid #cbd5e1;
+            border-radius: 6px; font-size: 14px; transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group textarea:focus { outline: none; border-color: #3b82f6; }
+        
+        .radio-group { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; }
+        .radio-option { display: flex; align-items: center; cursor: pointer; font-size: 13px; }
+        .radio-option input { margin-right: 6px; width: auto; }
+
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
+        .btn { padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-secondary { background: #e2e8f0; color: #475569; }
+        .btn-secondary:hover { background: #cbd5e1; }
+        
+        /* Floating Button */
+        .floating-today-btn {
+            position: absolute; bottom: 25px; right: 25px; z-index: 900;
+            background-color: #0ea5e9; color: white; border: none;
+            border-radius: 30px; padding: 10px 20px; font-weight: 600;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4); cursor: pointer;
+            transform: translateY(150%); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .floating-today-btn.visible { transform: translateY(0); opacity: 1; }
+
+        /* Popover */
+        #eventPopover {
+            position: absolute; z-index: 1010; background: white;
+            border: 1px solid #e2e8f0; border-radius: 6px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); padding: 12px;
+            max-width: 300px; font-size: 13px; line-height: 1.5; color: #334155;
+        }
+
+        /* Datepicker */
+        #datePickerModal {
+            position: absolute; z-index: 1001; background: #fff;
+            border: 1px solid #e2e8f0; border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 15px; width: 300px;
+        }
+        .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; margin-top: 10px; }
+        .day { padding: 8px 0; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .day:hover { background-color: #f1f5f9; }
+        .day.today { background-color: #3b82f6; color: white; }
+        .day.other-month { color: #cbd5e1; }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header" id="mainHeader">
+            <div class="recurring-note">
+                <i class="bi bi-journal-text text-secondary fs-5"></i>
+                <input type="text" id="editableNotes" placeholder="Note generali..." spellcheck="false">
+            </div>
+            <div class="month-controls">
+                <label class="day-toggle" title="Nascondi o mostra i sabati">
+                    <input type="checkbox" id="toggleSaturday" checked><span>Sab</span>
+                </label>
+                <label class="day-toggle" title="Nascondi o mostra le domeniche">
+                    <input type="checkbox" id="toggleSunday" checked><span>Dom</span>
+                </label>
+
+                <button onclick="toggleViewMode()" id="btnViewMode" title="Cambia visualizzazione" style="margin-right: 5px;">
+                    <i class="bi bi-arrows-expand"></i>
+                </button>
+
+                <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(this)">
+                <button onclick="document.getElementById('importFile').click()" title="Importa" style="margin-right: 5px;">
+                    <i class="bi bi-box-arrow-in-down"></i>
+                </button>
+                <button onclick="exportData()" title="Esporta" style="margin-right: 15px;">
+                    <i class="bi bi-box-arrow-up"></i>
+                </button>
+
+                <button class="current-month" id="currentMonth"></button>
+
+                <!-- Switch Vista -->
+                <button onclick="app.toggleMainView()" id="btnMainView" title="Mostra Scadenziario/Calendario"
+                    style="margin-right: 5px; background-color:#fffbeb; border-color:#fcd34d; color: #92400e;">
+                    <i class="bi bi-list-task"></i> Scadenze
+                </button>
+            </div>
+        </div>
+
+        <!-- BARRA LINGUETTA -->
+        <div class="toggle-bar">
+            <div class="linguetta" id="headerToggleBtn" title="Mostra/Nascondi Intestazione">
+                <i class="bi bi-chevron-compact-up" id="headerToggleIcon"></i>
+            </div>
+        </div>
+
+        <!-- VISTA CALENDARIO -->
+        <div class="calendar-grid" id="calendar"></div>
+
+        <!-- VISTA SCADENZIARIO (MIGLIORATA) -->
+        <div class="deadlines-view" id="deadlinesView">
+            
+            <div class="deadline-header">
+                <div>
+                    <h2>Scadenziario</h2>
+                    <p>Gestisci i tuoi adempimenti e le date importanti</p>
+                </div>
+                <button class="btn-add-deadline" onclick="app.openDeadlineModal()">
+                    <i class="bi bi-plus-lg"></i> Nuova Scadenza
+                </button>
+            </div>
+
+            <!-- Barra Controlli: Ricerca e Filtri -->
+            <div class="deadline-controls">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="deadlineSearch" class="search-input" placeholder="Cerca per descrizione o note..." onkeyup="app.renderDeadlines()">
+                </div>
+                <select id="deadlineFilter" class="filter-select" onchange="app.renderDeadlines()">
+                    <option value="all">Tutti gli stati</option>
+                    <option value="overdue">Scaduti</option>
+                    <option value="near">In scadenza (7 gg)</option>
+                    <option value="future">Futuri</option>
+                </select>
+            </div>
+
+            <div class="deadlines-table-container">
+                <table class="deadlines-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%;">#</th>
+                            <th style="width: 15%;">Data Scadenza</th>
+                            <th style="width: 15%;">Stato</th>
+                            <th style="width: 45%;">Descrizione e Note</th>
+                            <th style="width: 12%;">Data Inizio</th>
+                            <th style="width: 8%; text-align: center;">Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deadlinesTableBody">
+                        <!-- Popolato via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- BOTTONE FLOTTANTE -->
+        <button id="floatingTodayBtn" class="floating-today-btn" onclick="goToToday()">
+            <i class="bi bi-calendar-check-fill"></i> Vai a Oggi
+        </button>
+    </div>
+
+    <!-- MODAL EVENTI CALENDARIO -->
+    <div class="modal" id="eventModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Nuovo Evento</h2>
+            </div>
+            <form id="eventForm">
+                <input type="hidden" id="editingEventKey"><input type="hidden" id="editingEventIndex">
+
+                <div class="form-group">
+                    <label>Tipo Evento</label>
+                    <div class="radio-group">
+                        <div class="radio-option"><input type="radio" name="eventType" value="normal" checked> Normale</div>
+                        <div class="radio-option"><input type="radio" name="eventType" value="urgent"> Importante</div>
+                        <div class="radio-option"><input type="radio" name="eventType" value="pending"> In attesa</div>
+                        <div class="radio-option"><input type="radio" name="eventType" value="confirmed"> Confermato</div>
+                        <div class="radio-option"><input type="radio" name="eventType" value="recurring"> Ricorrente</div>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:15px;">
+                    <div class="form-group" style="flex:1">
+                        <label for="eventTitle">Titolo</label>
+                        <input type="text" id="eventTitle" required>
+                    </div>
+                    <div class="form-group" style="width:140px;">
+                        <label for="eventDate">Data</label>
+                        <input type="date" id="eventDate" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="eventDescription">Note</label>
+                    <textarea id="eventDescription" rows="4"></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Salva</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL SCADENZE -->
+    <div class="modal" id="deadlineModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="deadlineModalTitle">Nuova Scadenza</h2>
+            </div>
+            <form id="deadlineForm">
+                <input type="hidden" id="editingDeadlineId">
+                <div style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex:1">
+                        <label for="deadlineStart">Data Inizio (Evento)</label>
+                        <input type="date" id="deadlineStart" required>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label for="deadlineDue">Data Scadenza</label>
+                        <input type="date" id="deadlineDue" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="deadlineDesc">Descrizione</label>
+                    <input type="text" id="deadlineDesc" required>
+                </div>
+                <div class="form-group">
+                    <label for="deadlineNotes">Note Aggiuntive</label>
+                    <textarea id="deadlineNotes" rows="3"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="app.closeDeadlineModal()">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Salva Scadenza</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="datePickerModal" style="display: none;"></div>
+    <div id="eventPopover" style="display: none;"><div class="arrow"></div><div class="popover-body"></div></div>
+
+    <!-- SCRIPT NEUTRALINO -->
+    <script src="/js/neutralino.js"></script>
+    <script src="/js/neutralino-init.js"></script>
+    <script src="/js/storage.js"></script>
+
+    <script>
+        class AgendaApp {
+            constructor() {
+                this.viewStartDate = new Date();
+                this.datePickerDate = new Date();
+                this.events = [];
+                this.deadlines = [];
+                this.holidays = {};
+                this._scrollTimer = null;
+                this.draggedEventData = null;
+                this.lastDeletedEvent = null;
+                this.showSunday = true;
+                this.showSaturday = true;
+                this.visibleWeeks = 2;
+                this.currentMainView = 'calendar';
+                this.handleClickOutsideDatePicker = this.handleClickOutsideDatePicker.bind(this);
+                this.popoverElement = document.getElementById('eventPopover');
+            }
+
+            async init() {
+                this.events = await this.loadEvents();
+                this.deadlines = await this.loadDeadlines();
+                this.showSunday = await storageGet('agendaShowSunday') !== 'false';
+                this.showSaturday = await storageGet('agendaShowSaturday') !== 'false';
+                this.visibleWeeks = parseInt(await storageGet('agendaVisibleWeeks')) || 2;
+
+                this.setStartDateToCurrentWeek();
+                document.getElementById('toggleSunday').checked = this.showSunday;
+                document.getElementById('toggleSaturday').checked = this.showSaturday;
+                this.updateViewModeIcon();
+                this.renderCalendar();
+                this.setupEventListeners();
+                this.loadRecurringNotes();
+                this.setupKeyboardNavigation();
+                
+                // Inizializza scadenziario vuoto ma pronto
+                this.renderDeadlines();
+            }
+
+            setStartDateToCurrentWeek() {
+                const today = new Date();
+                const dayOfWeek = today.getDay();
+                const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+                this.viewStartDate = new Date(today.setDate(diff));
+                this.viewStartDate.setHours(0, 0, 0, 0);
+            }
+
+            async loadEvents() { return JSON.parse(await storageGet('agendaEvents')) || {}; }
+            async saveEvents() { await storageSet('agendaEvents', JSON.stringify(this.events)); }
+            async loadDeadlines() { return JSON.parse(await storageGet('agendaDeadlines')) || []; }
+            async saveDeadlines() { await storageSet('agendaDeadlines', JSON.stringify(this.deadlines)); }
+            async loadRecurringNotes() { document.getElementById('editableNotes').value = await storageGet('agendaRecurringNotes') || ''; }
+            async saveRecurringNotes() { await storageSet('agendaRecurringNotes', document.getElementById('editableNotes').value); }
+
+            getItalianHolidays(year) {
+                const holidays = new Map(); const pad = (num) => String(num).padStart(2, '0');
+                const getEaster = (y) => { const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), month = Math.floor((h + l - 7 * m + 114) / 31), day = ((h + l - 7 * m + 114) % 31) + 1; return new Date(y, month - 1, day); };
+                const easterDate = getEaster(year); const easterMonday = new Date(easterDate); easterMonday.setDate(easterDate.getDate() + 1);
+                const fixedHolidays = { '01-01': 'Capodanno', '01-06': 'Epifania', '04-25': 'Liberazione', '05-01': 'Lavoratori', '06-02': 'Repubblica', '08-15': 'Ferragosto', '11-01': 'Ognissanti', '12-08': 'Immacolata', '12-25': 'Natale', '12-26': 'Santo Stefano' };
+                for (const [date, name] of Object.entries(fixedHolidays)) holidays.set(`${year}-${date}`, name);
+                holidays.set(`${year}-${pad(easterDate.getMonth() + 1)}-${pad(easterDate.getDate())}`, 'Pasqua'); 
+                holidays.set(`${year}-${pad(easterMonday.getMonth() + 1)}-${pad(easterMonday.getDate())}`, 'Pasquetta');
+                return holidays;
+            }
+
+            getViewRangeText() {
+                const endDate = new Date(this.viewStartDate);
+                endDate.setDate(endDate.getDate() + (this.visibleWeeks * 7));
+                const sm = this.viewStartDate.toLocaleDateString('it-IT', { month: 'long' });
+                const em = endDate.toLocaleDateString('it-IT', { month: 'long' });
+                const sy = this.viewStartDate.getFullYear();
+                const ey = endDate.getFullYear();
+                if (sy !== ey) return `${sm} ${sy} - ${em} ${ey}`;
+                if (sm !== em) return `${sm} - ${em} ${ey}`;
+                return `${sm} ${ey}`;
+            }
+
+            toggleMainView() {
+                const calendarDiv = document.getElementById('calendar');
+                const deadlinesDiv = document.getElementById('deadlinesView');
+                const btnIcon = document.querySelector('#btnMainView i');
+                const btnText = document.getElementById('btnMainView');
+                const btnGoToToday = document.getElementById('floatingTodayBtn');
+
+                if (this.currentMainView === 'calendar') {
+                    this.currentMainView = 'deadlines';
+                    calendarDiv.style.display = 'none';
+                    deadlinesDiv.classList.add('active');
+                    btnGoToToday.style.display = 'none';
+                    this.renderDeadlines(); // Renderizza con stato aggiornato
+
+                    btnIcon.className = 'bi bi-calendar3';
+                    btnText.innerHTML = '<i class="bi bi-calendar3"></i> Calendario';
+                    document.getElementById('currentMonth').style.display = 'none';
+                    document.getElementById('toggleSaturday').parentElement.style.display = 'none';
+                    document.getElementById('toggleSunday').parentElement.style.display = 'none';
+                    document.getElementById('btnViewMode').style.display = 'none';
+                } else {
+                    this.currentMainView = 'calendar';
+                    calendarDiv.style.display = 'grid';
+                    deadlinesDiv.classList.remove('active');
+                    btnGoToToday.style.display = 'flex';
+                    this.renderCalendar();
+
+                    btnIcon.className = 'bi bi-list-task';
+                    btnText.innerHTML = '<i class="bi bi-list-task"></i> Scadenze';
+                    document.getElementById('currentMonth').style.display = 'block';
+                    document.getElementById('toggleSaturday').parentElement.style.display = 'flex';
+                    document.getElementById('toggleSunday').parentElement.style.display = 'flex';
+                    document.getElementById('btnViewMode').style.display = 'inline-block';
+                }
+            }
+
+            renderCalendar(animate = false) {
+                if (this.currentMainView !== 'calendar') return;
+                const calendar = document.getElementById('calendar');
+                if (animate) { calendar.classList.remove('animating'); void calendar.offsetWidth; calendar.classList.add('animating'); }
+
+                calendar.innerHTML = '';
+                document.getElementById('currentMonth').innerHTML = this.getViewRangeText() + ' <i class="bi bi-caret-down"></i>';
+
+                calendar.classList.toggle('hide-sundays', !this.showSunday);
+                calendar.classList.toggle('hide-saturdays', !this.showSaturday);
+                calendar.classList.toggle('rows-4', this.visibleWeeks === 4);
+
+                const weekdays = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+                weekdays.forEach((day, index) => {
+                    if (!this.showSaturday && index === 5) return;
+                    if (!this.showSunday && index === 6) return;
+                    const cell = document.createElement('div');
+                    cell.className = 'weekday-header';
+                    if (index == 5) cell.classList.add('saturday');
+                    if (index == 6) cell.classList.add('sunday');
+                    cell.textContent = day;
+                    calendar.appendChild(cell);
+                });
+
+                let currentDate = new Date(this.viewStartDate);
+                const totalDays = this.visibleWeeks * 7;
+                const refMonth = new Date().getMonth(); // Usato solo per logica visuale
+
+                for (let i = 0; i < totalDays; i++) {
+                    const dayOfWeek = currentDate.getDay();
+                    if (!this.showSunday && dayOfWeek === 0) { currentDate.setDate(currentDate.getDate() + 1); continue; }
+                    if (!this.showSaturday && dayOfWeek === 6) { currentDate.setDate(currentDate.getDate() + 1); continue; }
+
+                    this.createDayCell(calendar, currentDate);
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+                this.updateFloatingButton();
+            }
+
+            createDayCell(container, dateObj) {
+                const day = dateObj.getDate();
+                const month = dateObj.getMonth();
+                const year = dateObj.getFullYear();
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                
+                const cell = document.createElement('div');
+                cell.className = 'day-cell';
+                
+                const today = new Date(); today.setHours(0,0,0,0);
+                const isToday = dateObj.getTime() === today.getTime();
+                
+                // Festività
+                if (!this.holidays[year]) this.holidays[year] = this.getItalianHolidays(year);
+                const holidayName = this.holidays[year].get(dateKey);
+                
+                const monthNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+                const shortMonth = monthNames[month].substring(0,3);
+                
+                if (holidayName) { cell.classList.add('holiday'); cell.title = holidayName; }
+                if (isToday) cell.classList.add('today');
+                if (dateObj.getDay() === 0) cell.classList.add('is-sunday');
+                if (dateObj.getDay() === 6) cell.classList.add('is-saturday');
+
+                // Label giorno
+                let dayLabel = `${day} <span style="font-size:12px; font-weight:400;">${shortMonth}</span>`;
+                if (holidayName) dayLabel += ' <i class="bi bi-star-fill" style="font-size:10px;"></i>';
+                
+                // Primo del mese
+                if (day === 1) {
+                    cell.classList.add('first-day-of-month');
+                    cell.style.setProperty('--content-text', `'${monthNames[month].toUpperCase()}'`);
+                }
+
+                cell.innerHTML = `<div class="day-number">${dayLabel}</div>`;
+                
+                // Eventi
+                const eventsContainer = document.createElement('div');
+                eventsContainer.className = 'events-container';
+                const dayEvents = this.getEventsForDate(dateKey);
+                
+                dayEvents.forEach((event, idx) => {
+                    const evIdx = this.events[dateKey].findIndex(e => e === event);
+                    const el = document.createElement('div');
+                    el.className = `event ${event.type}`;
+                    el.draggable = true;
+                    el.innerHTML = `<span>${this.truncateText(event.title)}</span>`;
+                    if(event.description) el.innerHTML += ' <i class="bi bi-text-paragraph" style="font-size:9px; opacity:0.7;"></i>';
+                    
+                    // Bottone delete
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'delete-event';
+                    delBtn.innerHTML = '×';
+                    delBtn.onclick = (e) => { e.stopPropagation(); this.deleteEvent(e, dateKey, evIdx); };
+                    el.appendChild(delBtn);
+
+                    // Event listeners
+                    el.onclick = (e) => { e.stopPropagation(); this.openModalForEdit(dateKey, evIdx); };
+                    el.addEventListener('dragstart', (e) => {
+                        this.draggedEventData = { sourceKey: dateKey, sourceIndex: evIdx };
+                        e.dataTransfer.setData('text/plain', JSON.stringify(this.draggedEventData));
+                    });
+                    el.addEventListener('mouseenter', () => this.showDescriptionPopover(event, el));
+                    el.addEventListener('mouseleave', () => this.hidePopover());
+                    
+                    eventsContainer.appendChild(el);
+                });
+
+                // Scroll blocking
+                eventsContainer.addEventListener('wheel', (e) => { if (e.currentTarget.scrollHeight > e.currentTarget.clientHeight) e.stopPropagation(); });
+
+                cell.appendChild(eventsContainer);
+                
+                // Drag & Drop sulla cella
+                cell.addEventListener('dblclick', (e) => { if(!e.target.closest('.event')) this.showQuickAddInput(cell, dateKey); });
+                cell.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; cell.classList.add('drag-over'); });
+                cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+                cell.addEventListener('drop', (e) => {
+                    e.preventDefault(); cell.classList.remove('drag-over');
+                    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    if (data.sourceKey !== dateKey) this.moveEvent(data.sourceKey, data.sourceIndex, dateKey);
+                });
+
+                container.appendChild(cell);
+            }
+
+            // --- DEADLINES LOGIC ---
+            renderDeadlines() {
+                const tbody = document.getElementById('deadlinesTableBody');
+                const searchInput = document.getElementById('deadlineSearch');
+                const filterSelect = document.getElementById('deadlineFilter');
+                
+                tbody.innerHTML = '';
+                const searchText = searchInput ? searchInput.value.toLowerCase() : '';
+                const filterValue = filterSelect ? filterSelect.value : 'all';
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+
+                let sorted = [...this.deadlines].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+                let visibleCount = 0;
+
+                sorted.forEach((item, index) => {
+                    // Filtro Ricerca
+                    if (searchText && !item.desc.toLowerCase().includes(searchText) && !(item.notes || '').toLowerCase().includes(searchText)) return;
+
+                    const dueDate = new Date(item.dueDate); dueDate.setHours(0,0,0,0);
+                    const diffTime = dueDate - today;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    let statusHtml = '';
+                    let category = 'future';
+
+                    if (diffDays < 0) {
+                        category = 'overdue';
+                        statusHtml = `<span class="status-badge status-overdue"><i class="bi bi-exclamation-octagon-fill"></i> Scaduto da ${Math.abs(diffDays)} gg</span>`;
+                    } else if (diffDays === 0) {
+                        category = 'near';
+                        statusHtml = `<span class="status-badge status-today"><i class="bi bi-bell-fill"></i> Scade Oggi</span>`;
+                    } else if (diffDays <= 7) {
+                        category = 'near';
+                        statusHtml = `<span class="status-badge status-warning"><i class="bi bi-hourglass-split"></i> -${diffDays} giorni</span>`;
+                    } else {
+                        statusHtml = `<span class="status-badge status-future"><i class="bi bi-calendar-check"></i> Tra ${diffDays} giorni</span>`;
+                    }
+
+                    // Filtro Select
+                    if (filterValue === 'overdue' && category !== 'overdue') return;
+                    if (filterValue === 'near' && (diffDays < 0 || diffDays > 7)) return;
+                    if (filterValue === 'future' && diffDays <= 7) return;
+
+                    visibleCount++;
+                    const tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.onclick = (e) => { if(!e.target.closest('.btn-icon')) this.editDeadline(item.id); };
+
+                    const dStr = dueDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+                    const wStr = dueDate.toLocaleDateString('it-IT', { weekday: 'long' });
+                    const sStr = new Date(item.startDate).toLocaleDateString('it-IT');
+
+                    tr.innerHTML = `
+                        <td style="color:#cbd5e1; font-size:12px;">${visibleCount}</td>
+                        <td><span class="date-primary">${dStr}</span><span class="date-secondary">${wStr}</span></td>
+                        <td>${statusHtml}</td>
+                        <td><span class="desc-text">${item.desc}</span><span class="notes-text">${item.notes || '-'}</span></td>
+                        <td style="color:#64748b;">${sStr}</td>
+                        <td style="text-align:center;">
+                            <button class="btn-icon edit" onclick="app.editDeadline(${item.id})"><i class="bi bi-pencil-square"></i></button>
+                            <button class="btn-icon delete" onclick="app.deleteDeadline(${item.id})"><i class="bi bi-trash3"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                if (visibleCount === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px; color:#94a3b8;">
+                        <i class="bi bi-clipboard-check" style="font-size:32px; margin-bottom:10px; display:block;"></i>
+                        Nessuna scadenza trovata.</td></tr>`;
+                }
+            }
+
+            openDeadlineModal(id = null) {
+                const form = document.getElementById('deadlineForm'); form.reset();
+                document.getElementById('editingDeadlineId').value = '';
+                document.getElementById('deadlineModal').style.display = 'flex';
+                document.getElementById('deadlineModalTitle').textContent = id ? 'Modifica Scadenza' : 'Nuova Scadenza';
+
+                if (id) {
+                    const item = this.deadlines.find(d => d.id === id);
+                    if (item) {
+                        document.getElementById('editingDeadlineId').value = item.id;
+                        document.getElementById('deadlineStart').value = item.startDate;
+                        document.getElementById('deadlineDue').value = item.dueDate;
+                        document.getElementById('deadlineDesc').value = item.desc;
+                        document.getElementById('deadlineNotes').value = item.notes;
+                    }
+                } else {
+                    // Default dates
+                    document.getElementById('deadlineStart').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('deadlineDue').value = new Date().toISOString().split('T')[0];
+                }
+            }
+
+            closeDeadlineModal() { document.getElementById('deadlineModal').style.display = 'none'; }
+
+            saveDeadline(formData) {
+                const id = document.getElementById('editingDeadlineId').value;
+                const newDeadline = {
+                    id: id ? parseInt(id) : Date.now(),
+                    startDate: formData.startDate,
+                    dueDate: formData.dueDate,
+                    desc: formData.desc,
+                    notes: formData.notes
+                };
+
+                if (id) {
+                    const idx = this.deadlines.findIndex(d => d.id == id);
+                    if (idx !== -1) {
+                        this.removeDeadlineEvent(this.deadlines[idx]);
+                        this.deadlines[idx] = newDeadline;
+                    }
+                } else {
+                    this.deadlines.push(newDeadline);
+                }
+
+                this.addDeadlineEvent(newDeadline);
+                this.saveDeadlines();
+                this.renderDeadlines();
+                this.closeDeadlineModal();
+            }
+
+            deleteDeadline(id) {
+                if (confirm("Eliminare questa scadenza?")) {
+                    const d = this.deadlines.find(i => i.id === id);
+                    if(d) this.removeDeadlineEvent(d);
+                    this.deadlines = this.deadlines.filter(i => i.id !== id);
+                    this.saveDeadlines();
+                    this.renderDeadlines();
+                }
+            }
+
+            // Sync with Calendar
+            addDeadlineEvent(d) {
+                if (!d.startDate) return;
+                if (!this.events[d.startDate]) this.events[d.startDate] = [];
+                this.events[d.startDate].push({
+                    title: "SCADENZA: " + d.desc,
+                    description: `Scade il: ${d.dueDate}\n${d.notes||''}`,
+                    type: 'recurring',
+                    deadlineId: d.id
+                });
+                this.saveEvents();
+                if(this.currentMainView === 'calendar') this.renderCalendar();
+            }
+
+            removeDeadlineEvent(d) {
+                const cleanup = (dateKey) => {
+                    if (this.events[dateKey]) {
+                        const idx = this.events[dateKey].findIndex(e => e.deadlineId === d.id);
+                        if (idx !== -1) {
+                            this.events[dateKey].splice(idx, 1);
+                            if (this.events[dateKey].length === 0) delete this.events[dateKey];
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+                if (!cleanup(d.startDate)) {
+                    for (const key in this.events) cleanup(key); // Fallback scan
+                }
+                this.saveEvents();
+                if(this.currentMainView === 'calendar') this.renderCalendar();
+            }
+
+            editDeadline(id) { this.openDeadlineModal(id); }
+
+            // --- UTILS & EVENT HANDLERS ---
+            getEventsForDate(dateKey) {
+                const list = this.events[dateKey] ? [...this.events[dateKey]] : [];
+                const order = { 'urgent': 1, 'normal': 2, 'pending': 3, 'confirmed': 4, 'recurring': 5 };
+                return list.sort((a, b) => (order[a.type] || 9) - (order[b.type] || 9));
+            }
+
+            truncateText(text, max = 25) {
+                return (text && text.length > max) ? text.substring(0, max) + '...' : (text || '');
+            }
+
+            showDescriptionPopover(event, target) {
+                if (!event.description) return;
+                const p = this.popoverElement;
+                p.querySelector('.popover-body').innerHTML = event.description.replace(/\n/g, '<br>');
+                p.style.display = 'block';
+                
+                const rect = target.getBoundingClientRect();
+                const pRect = p.getBoundingClientRect();
+                
+                let top = rect.top + (rect.height / 2) - (pRect.height / 2);
+                let left = rect.right + 10;
+                
+                // Keep inside viewport
+                if (left + pRect.width > window.innerWidth) {
+                    left = rect.left - pRect.width - 10;
+                    p.querySelector('.arrow').className = 'arrow right';
+                } else {
+                    p.querySelector('.arrow').className = 'arrow left';
+                }
+                if (top < 10) top = 10;
+                if (top + pRect.height > window.innerHeight) top = window.innerHeight - pRect.height - 10;
+
+                p.style.top = `${top}px`;
+                p.style.left = `${left}px`;
+            }
+            hidePopover() { this.popoverElement.style.display = 'none'; }
+
+            showQuickAddInput(cell, dateKey) {
+                const inp = document.createElement('input');
+                inp.className = 'search-input'; // Reuse style
+                inp.style.padding = '2px 5px'; inp.style.height = 'auto'; inp.style.marginTop='5px';
+                inp.placeholder = 'Nuovo...';
+                
+                const save = () => {
+                    if (inp.value.trim()) this.addEvent(inp.value.trim(), '', 'normal', dateKey);
+                    inp.remove();
+                };
+                inp.onkeydown = (e) => { if(e.key === 'Enter') save(); if(e.key === 'Escape') inp.remove(); };
+                inp.onblur = save;
+                cell.querySelector('.events-container').appendChild(inp);
+                inp.focus();
+            }
+
+            openModal(dateKey) {
+                document.getElementById('eventModal').style.display = 'flex';
+                document.getElementById('modalTitle').textContent = 'Nuovo Evento';
+                document.getElementById('eventForm').reset();
+                document.getElementById('eventDate').value = dateKey || new Date().toISOString().split('T')[0];
+                document.getElementById('eventTitle').focus();
+            }
+
+            openModalForEdit(dateKey, idx) {
+                const ev = this.events[dateKey][idx];
+                this.openModal(dateKey);
+                document.getElementById('modalTitle').textContent = 'Modifica Evento';
+                document.getElementById('eventTitle').value = ev.title;
+                document.getElementById('eventDescription').value = ev.description || '';
+                document.querySelector(`input[name="eventType"][value="${ev.type}"]`).checked = true;
+                document.getElementById('editingEventKey').value = dateKey;
+                document.getElementById('editingEventIndex').value = idx;
+            }
+
+            closeModal() { document.getElementById('eventModal').style.display = 'none'; }
+
+            addEvent(title, desc, type, date) {
+                if (!this.events[date]) this.events[date] = [];
+                this.events[date].push({ title, description: desc, type });
+                this.saveEvents(); this.renderCalendar();
+            }
+
+            updateEvent(oldDate, idx, title, desc, type, newDate) {
+                const ev = { title, description: desc, type };
+                if (oldDate === newDate) this.events[oldDate][idx] = ev;
+                else {
+                    this.events[oldDate].splice(idx, 1);
+                    if (!this.events[oldDate].length) delete this.events[oldDate];
+                    if (!this.events[newDate]) this.events[newDate] = [];
+                    this.events[newDate].push(ev);
+                }
+                this.saveEvents(); this.renderCalendar();
+            }
+
+            deleteEvent(e, date, idx) {
+                if (e) e.stopPropagation();
+                this.lastDeletedEvent = { ...this.events[date][idx], _date: date };
+                this.events[date].splice(idx, 1);
+                if (!this.events[date].length) delete this.events[date];
+                this.saveEvents(); this.renderCalendar(); this.hidePopover();
+            }
+
+            moveEvent(sKey, sIdx, tKey) {
+                if (!this.events[sKey]) return;
+                const ev = this.events[sKey].splice(sIdx, 1)[0];
+                if (!this.events[sKey].length) delete this.events[sKey];
+                if (!this.events[tKey]) this.events[tKey] = [];
+                this.events[tKey].push(ev);
+                this.saveEvents(); this.renderCalendar();
+            }
+
+            // --- DATEPICKER & NAV ---
+            toggleDatePicker() {
+                const modal = document.getElementById('datePickerModal');
+                if (modal.style.display === 'block') return this.closeDatePicker();
+                this.datePickerDate = new Date(this.viewStartDate);
+                this.renderDatePicker();
+                modal.style.display = 'block';
+                const rect = document.getElementById('currentMonth').getBoundingClientRect();
+                modal.style.top = (rect.bottom + 5) + 'px';
+                modal.style.left = (rect.left + rect.width/2 - 150) + 'px';
+                setTimeout(() => document.addEventListener('click', this.handleClickOutsideDatePicker), 0);
+            }
+            
+            closeDatePicker() {
+                document.getElementById('datePickerModal').style.display = 'none';
+                document.removeEventListener('click', this.handleClickOutsideDatePicker);
+            }
+            
+            handleClickOutsideDatePicker(e) {
+                if (!document.getElementById('datePickerModal').contains(e.target) && e.target.id !== 'currentMonth') this.closeDatePicker();
+            }
+
+            renderDatePicker() {
+                const m = this.datePickerDate.getMonth(), y = this.datePickerDate.getFullYear();
+                const first = new Date(y, m, 1), days = new Date(y, m+1, 0).getDate();
+                const startDay = (first.getDay() + 6) % 7;
+                
+                let html = `<div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <button id="dp-prev" style="border:none; bg:transparent; cursor:pointer;">&lt;</button>
+                    <strong>${this.datePickerDate.toLocaleDateString('it-IT',{month:'long', year:'numeric'})}</strong>
+                    <button id="dp-next" style="border:none; bg:transparent; cursor:pointer;">&gt;</button>
+                </div><div class="days-grid">
+                <div style="font-size:11px; font-weight:bold; color:#94a3b8;">L</div>
+                <div style="font-size:11px; font-weight:bold; color:#94a3b8;">M</div>
+                <div style="font-size:11px; font-weight:bold; color:#94a3b8;">M</div>
+                <div style="font-size:11px; font-weight:bold; color:#94a3b8;">G</div>
+                <div style="font-size:11px; font-weight:bold; color:#94a3b8;">V</div>
+                <div style="font-size:11px; font-weight:bold; color:#94a3b8;">S</div>
+                <div style="font-size:11px; font-weight:bold; color:#94a3b8;">D</div>`;
+                
+                for(let i=0; i<startDay; i++) html+=`<div class="day other-month"></div>`;
+                for(let i=1; i<=days; i++) html+=`<div class="day${(i===new Date().getDate() && m===new Date().getMonth())?' today':''}" onclick="app.goToDate(${y},${m},${i})">${i}</div>`;
+                
+                document.getElementById('datePickerModal').innerHTML = html + '</div>';
+                document.getElementById('dp-prev').onclick = () => { this.datePickerDate.setMonth(m-1); this.renderDatePicker(); };
+                document.getElementById('dp-next').onclick = () => { this.datePickerDate.setMonth(m+1); this.renderDatePicker(); };
+            }
+
+            goToDate(y, m, d) {
+                const date = new Date(y, m, d);
+                const dayOfWeek = date.getDay();
+                const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+                this.viewStartDate = new Date(date.setDate(diff));
+                this.renderCalendar(true);
+                this.closeDatePicker();
+            }
+
+            setupEventListeners() {
+                // Main Buttons
+                document.getElementById('currentMonth').onclick = () => this.toggleDatePicker();
+                document.getElementById('headerToggleBtn').onclick = () => {
+                    document.getElementById('mainHeader').classList.toggle('collapsed');
+                    const icon = document.getElementById('headerToggleIcon');
+                    icon.classList.toggle('bi-chevron-compact-up');
+                    icon.classList.toggle('bi-chevron-compact-down');
+                };
+
+                // Checkboxes
+                const updateVis = async (prop, val) => {
+                    this[prop] = val;
+                    await storageSet('agenda' + prop.charAt(0).toUpperCase() + prop.slice(1), val);
+                    this.renderCalendar();
+                };
+                document.getElementById('toggleSunday').onchange = (e) => updateVis('showSunday', e.target.checked);
+                document.getElementById('toggleSaturday').onchange = (e) => updateVis('showSaturday', e.target.checked);
+
+                // Forms
+                document.getElementById('eventForm').onsubmit = (e) => {
+                    e.preventDefault();
+                    const k = document.getElementById('editingEventKey').value;
+                    const i = document.getElementById('editingEventIndex').value;
+                    const t = document.getElementById('eventTitle').value;
+                    const d = document.getElementById('eventDescription').value;
+                    const tp = document.querySelector('input[name="eventType"]:checked').value;
+                    const dt = document.getElementById('eventDate').value;
+                    if(k && i) this.updateEvent(k, parseInt(i), t, d, tp, dt);
+                    else this.addEvent(t, d, tp, dt);
+                    this.closeModal();
+                };
+
+                document.getElementById('deadlineForm').onsubmit = (e) => {
+                    e.preventDefault();
+                    this.saveDeadline({
+                        startDate: document.getElementById('deadlineStart').value,
+                        dueDate: document.getElementById('deadlineDue').value,
+                        desc: document.getElementById('deadlineDesc').value,
+                        notes: document.getElementById('deadlineNotes').value
+                    });
+                };
+
+                // Scroll
+                const cal = document.getElementById('calendar');
+                let scrollTimeout;
+                cal.addEventListener('wheel', (e) => {
+                    if(this.currentMainView !== 'calendar') return;
+                    e.preventDefault();
+                    if(scrollTimeout) return;
+                    if(e.deltaY > 30) { this.viewStartDate.setDate(this.viewStartDate.getDate()+7); this.renderCalendar(true); }
+                    else if(e.deltaY < -30) { this.viewStartDate.setDate(this.viewStartDate.getDate()-7); this.renderCalendar(true); }
+                    scrollTimeout = setTimeout(()=>scrollTimeout=null, 200);
+                }, {passive:false});
+                
+                document.getElementById('editableNotes').onblur = () => this.saveRecurringNotes();
+            }
+
+            setupKeyboardNavigation() {
+                document.onkeydown = (e) => {
+                    if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                    if(this.currentMainView === 'calendar') {
+                        if(e.key==='ArrowDown') { this.viewStartDate.setDate(this.viewStartDate.getDate()+7); this.renderCalendar(true); }
+                        if(e.key==='ArrowUp') { this.viewStartDate.setDate(this.viewStartDate.getDate()-7); this.renderCalendar(true); }
+                    }
+                    if(e.key==='Escape') { this.closeModal(); this.closeDeadlineModal(); this.hidePopover(); }
+                };
+            }
+            
+            toggleViewMode() {
+                this.visibleWeeks = (this.visibleWeeks === 2) ? 4 : 2;
+                storageSet('agendaVisibleWeeks', this.visibleWeeks);
+                this.updateViewModeIcon();
+                this.renderCalendar(true);
+            }
+
+            updateViewModeIcon() {
+                const i = document.querySelector('#btnViewMode i');
+                i.className = (this.visibleWeeks === 2) ? 'bi bi-arrows-expand' : 'bi bi-arrows-collapse';
+            }
+
+            updateFloatingButton() {
+                const btn = document.getElementById('floatingTodayBtn');
+                const today = new Date(); today.setHours(0,0,0,0);
+                const end = new Date(this.viewStartDate); end.setDate(end.getDate() + (this.visibleWeeks*7));
+                if(today >= this.viewStartDate && today < end) btn.classList.remove('visible');
+                else btn.classList.add('visible');
+            }
+        }
+
+        const app = new AgendaApp();
+        app.init();
+
+        // Global Wrappers
+        function closeModal() { app.closeModal(); }
+        function goToToday() { app.setStartDateToCurrentWeek(); app.renderCalendar(true); }
+        function toggleViewMode() { app.toggleViewMode(); }
+        
+        // Export/Import
+        async function exportData() {
+            try {
+                const data = {
+                    events: JSON.parse(await storageGet('agendaEvents')||'{}'),
+                    deadlines: JSON.parse(await storageGet('agendaDeadlines')||'[]'),
+                    notes: await storageGet('agendaRecurringNotes')
+                };
+                const entry = await Neutralino.os.showSaveDialog('Salva Backup', {defaultPath: `agenda_${new Date().toISOString().slice(0,10)}.json`});
+                if(entry) {
+                    await Neutralino.filesystem.writeFile(entry, JSON.stringify(data, null, 2));
+                    await Neutralino.os.showMessageBox('Successo', 'Backup esportato correttamente.', 'OK', 'INFO');
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function importData(input) {
+            if(!input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const d = JSON.parse(e.target.result);
+                    if(confirm("Sovrascrivere tutti i dati?")) {
+                        if(d.events) await storageSet('agendaEvents', JSON.stringify(d.events));
+                        if(d.deadlines) await storageSet('agendaDeadlines', JSON.stringify(d.deadlines));
+                        if(d.notes) await storageSet('agendaRecurringNotes', d.notes);
+                        location.reload();
+                    }
+                } catch(err) { alert("File non valido"); }
+            };
+            reader.readAsText(input.files[0]);
+        }
+    </script>
+</body>
+</html>
