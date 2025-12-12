@@ -1472,6 +1472,11 @@
                 this.updateFloatingButton();
             }
 
+            formatDate(dateStr) {
+                if (!dateStr) return '';
+                return new Date(dateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+            };
+
             // --- DEADLINES RENDER LOGIC ---
             renderDeadlines() {
                 const tbody = document.getElementById('deadlinesTableBody');
@@ -1502,19 +1507,14 @@
                         tr.classList.add('overdue'); // Rosso scaduto
                     }
 
-                    const formatDate = (dateStr) => {
-                        if (!dateStr) return '';
-                        return new Date(dateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
-                    };
-
                     let noteText = item.notes || '';
                     if (noteText.length > 80) {
                         noteText = noteText.substring(0, 80) + ' ...';
                     }
 
                     tr.innerHTML = `
-                        <td>${formatDate(item.startDate)}</td>
-                        <td>${formatDate(item.dueDate)}</td>
+                        <td>${this.formatDate(item.startDate)}</td>
+                        <td>${this.formatDate(item.dueDate)}</td>
                         <td class="deadline-desc">${item.desc}</td>
                         <!--<td class="deadline-note">${noteText}</td>-->
                         <td class="deadline-actions">
@@ -1605,7 +1605,7 @@
 
                 const newEvent = {
                     title: deadline.desc,
-                    description: deadline.notes || '',
+                    description: 'DATA SCADENZA: ' + this.formatDate(deadline.dueDate) + '\n\n' + (deadline.notes || ''),
                     type: 'recurring',
                     deadlineId: deadline.id // Link to deadline
                 };
@@ -1907,8 +1907,73 @@
 
             setupEventListeners() {
                 document.getElementById('currentMonth').addEventListener('click', () => this.toggleDatePicker());
-                document.getElementById('toggleSunday').addEventListener('change', async (e) => { this.showSunday = e.target.checked; await storageSet('agendaShowSunday', this.showSunday); this.renderCalendar(); });
-                document.getElementById('toggleSaturday').addEventListener('change', async (e) => { this.showSaturday = e.target.checked; await storageSet('agendaShowSaturday', this.showSaturday); this.renderCalendar(); });
+                document.getElementById('toggleSunday').addEventListener('change', async (e) => {
+                    const isShowing = e.target.checked;
+
+                    // Se l'utente sta cercando di nascondere le domeniche (isShowing === false)
+                    if (!isShowing) {
+                        let hasSundayEvents = false;
+
+                        // Controlla se ci sono eventi di domenica
+                        for (const dateKey in this.events) {
+                            if (this.events[dateKey] && this.events[dateKey].length > 0) {
+                                const [y, m, d] = dateKey.split('-').map(Number);
+                                const date = new Date(y, m - 1, d);
+                                // 0 = Domenica
+                                if (date.getDay() === 0) {
+                                    hasSundayEvents = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (hasSundayEvents) {
+                            const confirmHide = confirm("Attenzione: sono presenti eventi programmati di Domenica.\nNascondendo la colonna, questi eventi non saranno più visibili (ma non verranno cancellati).\n\nVuoi procedere comunque?");
+                            if (!confirmHide) {
+                                e.target.checked = true; // Annulla l'azione (ripristina la spunta)
+                                return;
+                            }
+                        }
+                    }
+
+                    this.showSunday = isShowing;
+                    await storageSet('agendaShowSunday', this.showSunday);
+                    this.renderCalendar();
+                });
+                
+                document.getElementById('toggleSaturday').addEventListener('change', async (e) => {
+                    const isShowing = e.target.checked;
+
+                    // Se l'utente sta cercando di nascondere i sabati (isShowing === false)
+                    if (!isShowing) {
+                        let hasSaturdayEvents = false;
+
+                        // Controlla se ci sono eventi di sabato
+                        for (const dateKey in this.events) {
+                            if (this.events[dateKey] && this.events[dateKey].length > 0) {
+                                const [y, m, d] = dateKey.split('-').map(Number);
+                                const date = new Date(y, m - 1, d);
+                                // 6 = Sabato
+                                if (date.getDay() === 6) {
+                                    hasSaturdayEvents = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (hasSaturdayEvents) {
+                            const confirmHide = confirm("Attenzione: sono presenti eventi programmati di Sabato.\nNascondendo la colonna, questi eventi non saranno più visibili (ma non verranno cancellati).\n\nVuoi procedere comunque?");
+                            if (!confirmHide) {
+                                e.target.checked = true; // Annulla l'azione (ripristina la spunta)
+                                return;
+                            }
+                        }
+                    }
+
+                    this.showSaturday = isShowing;
+                    await storageSet('agendaShowSaturday', this.showSaturday);
+                    this.renderCalendar();
+                });
 
                 document.getElementById('eventForm').addEventListener('submit', (e) => {
                     e.preventDefault();
