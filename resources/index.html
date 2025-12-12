@@ -968,7 +968,7 @@
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            overflow: hidden;
+            overflow: auto;
             border: 1px solid #dee2e6;
         }
 
@@ -987,6 +987,14 @@
             color: #2c3e50;
         }
 
+        .deadlines-table thead th {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 2;
+            background-color: #f5f5f5;
+        }
+
         .deadlines-table td {
             padding: 12px 15px;
             border-bottom: 1px solid #eee;
@@ -996,8 +1004,6 @@
         .deadlines-table tr:last-child td {
             border-bottom: none;
         }
-
-
 
         /****** Colori righe scadenziario ******/
 
