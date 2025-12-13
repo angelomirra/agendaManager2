@@ -1269,6 +1269,9 @@
             <button class="modal-close" onclick="app.closeDeadlineModal()" aria-label="Chiudi modal">×</button>
             <div class="modal-header">
                 <h2 id="deadlineModalTitle">Nuova Scadenza</h2>
+                <p id="deadlineModalWarning" style="font-size: 13px; margin-top: 5px; color: #d35400;"><i
+                        class="bi bi-exclamation-triangle"></i> Ogni modifica apportata qui, sovrascriverà l'evento nel
+                    calendario</p>
             </div>
             <form id="deadlineForm">
                 <input type="hidden" id="editingDeadlineId">
@@ -1565,9 +1568,11 @@
                 const modal = document.getElementById('deadlineModal');
                 const form = document.getElementById('deadlineForm');
                 const title = document.getElementById('deadlineModalTitle');
+                const warning = document.getElementById('deadlineModalWarning');
 
                 form.reset();
                 document.getElementById('editingDeadlineId').value = '';
+                warning.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Ogni modifica apportata qui, sovrascriverà l\'evento nel calendario';
 
                 if (id) {
                     const item = this.deadlines.find(d => d.id === id);
@@ -1581,6 +1586,7 @@
                     }
                 } else {
                     title.textContent = 'Nuova Scadenza';
+                    warning.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Al salvataggio, sarà creato un nuovo evento nel calendario';
                 }
                 modal.style.display = 'flex';
             }
