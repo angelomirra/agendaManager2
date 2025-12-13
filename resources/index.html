@@ -1174,10 +1174,11 @@
                 <table class="deadlines-table">
                     <thead>
                         <tr>
+                            <th style="width: 5%; text-align: center;">#</th>
+                            <th style="width: 10%;">Stato</th>
                             <th style="width: 15%;">Data Evento</th>
                             <th style="width: 15%;">Data Scadenza</th>
-                            <th style="width: 60%;">Descrizione Adempimento</th>
-                            <!-- <th style="width: 32%;">Note</th> -->
+                            <th style="width: 45%;">Descrizione Adempimento</th>
                             <th style="width: 10%; text-align: center;">Azioni</th>
                         </tr>
                     </thead>
@@ -1523,25 +1524,30 @@
                     const endDate = new Date(item.dueDate);
                     endDate.setHours(0, 0, 0, 0);
 
-                    if (today >= startDate && today <= endDate) {
-                        tr.classList.add('near-due'); // Giallo in scadenza
-                    } else if (today > endDate) {
-                        tr.classList.add('overdue'); // Rosso scaduto
+                    let statusHtml = `<span style="color: #198754; font-weight: 600;">Attivo</span>`;
+                    if (today >= startDate) {
+                        // Calcolo Giorni Rimanenti
+                        const diffTime = endDate - today;
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+
+                        if (diffDays < 0) {
+                            tr.classList.add('overdue'); // Rosso scaduto
+                            statusHtml = `<span style="color: #dc3545; font-weight: 700;">Scaduto</span>`;
+                        } else if (diffDays >= 0) {
+                            tr.classList.add('near-due'); // Giallo in scadenza
+                            statusHtml = `<span style="color: #d35400; font-weight: 600;">Scade tra ${diffDays} giorni</span>`;
+                        }
                     }
 
-                    let noteText = item.notes || '';
-                    if (noteText.length > 80) {
-                        noteText = noteText.substring(0, 80) + ' ...';
-                    }
-
-                    let descText = noteText ? item.desc + ' <i class="bi bi-chat-text" style="margin-left:4px; font-size:11px; color:#64748b;"></i>' : item.desc;
-
+                    let descText = item.notes ? item.desc + ' <i class="bi bi-chat-text" style="margin-left:4px; font-size:11px; color:#64748b;"></i>' : item.desc;
 
                     tr.innerHTML = `
+                        <td style="text-align: center; color: #666;">${index + 1}</td>
+                        <td>${statusHtml}</td>
                         <td>${this.formatDate(item.startDate)}</td>
                         <td>${this.formatDate(item.dueDate)}</td>
                         <td class="deadline-desc">${descText}</td>
-                        <!--<td class="deadline-note">${noteText}</td>-->
                         <td class="deadline-actions">
                             <button class="btn-icon edit" onclick="app.editDeadline(${item.id})" title="Modifica"><i class="bi bi-pencil-square"></i></button>
                             <button class="btn-icon delete" onclick="app.deleteDeadline(${item.id})" title="Elimina"><i class="bi bi-trash3"></i></button>
@@ -1551,7 +1557,7 @@
                 });
 
                 if (sortedDeadlines.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#999;">Nessuna scadenza inserita.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:#999;">Nessuna scadenza inserita.</td></tr>';
                 }
             }
 
