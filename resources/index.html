@@ -1193,7 +1193,11 @@
                 <h2 id="modalTitle">Nuovo Evento</h2>
             </div>
             <form id="eventForm">
-                <input type="hidden" id="editingEventKey"><input type="hidden" id="editingEventIndex">
+                <input type="hidden" id="editingEventKey">
+                <input type="hidden" id="editingEventIndex">
+
+                <!-- id Scadenza Adempimento-->
+                <input type="hidden" id="editingDeadlineId">
 
                 <div class="form-group">
                     <label for="eventTypeContainer">Tipo</label>
@@ -1583,14 +1587,28 @@
                 if (id) {
                     const index = this.deadlines.findIndex(d => d.id == id);
                     if (index !== -1) {
-                        this.removeDeadlineEvent(this.deadlines[index]); // Remove old event
+                        const oldDeadline = this.deadlines[index];
+                        const hasDateChanged = oldDeadline.startDate !== newDeadline.startDate;
+
                         this.deadlines[index] = newDeadline;
+
+                        //HAI CAMBIATO LA DATA (Rinnovo adempimento)
+                        if (hasDateChanged) {
+                            // A. Pulizia: Se c'era ancora un vecchio evento in giro collegato a questo ID, lo togliamo
+                            // (Così non ti trovi duplicati se ti eri scordato di cancellare quello vecchio)
+                            this.removeDeadlineEvent(oldDeadline);
+
+                            // B. Creazione: Generiamo il NUOVO evento alla nuova data
+                            this.addDeadlineEvent(newDeadline);
+
+                        }
                     }
                 } else {
+                    // --- NUOVO ADEMPIMENTO ---
                     this.deadlines.push(newDeadline);
+                    this.addDeadlineEvent(newDeadline);
                 }
 
-                this.addDeadlineEvent(newDeadline); // Add new/updated event
 
                 this.saveDeadlines();
                 this.renderDeadlines();
@@ -1616,10 +1634,10 @@
                 if (!this.events[dateKey]) this.events[dateKey] = [];
 
                 const newEvent = {
-                    title: deadline.desc,
-                    description: deadline.notes || '',
-                    type: 'deadline-linked',
-                    deadlineId: deadline.id // Link to deadline
+                    title: "SCAD: " + deadline.desc, // Prefisso per distinguerlo visivamente
+                    description: `SCADENZA: ${this.formatDate(deadline.dueDate)}\n${deadline.notes || ''}`,
+                    type: 'pending', // Giallo: da fare
+                    deadlineId: deadline.id // Riferimento debole (serve solo se modifichi la scadenza padre)
                 };
 
                 this.events[dateKey].push(newEvent);
@@ -1628,30 +1646,16 @@
             }
 
             removeDeadlineEvent(deadline) {
-                // Try finding by date first
-                let dateKey = deadline.startDate;
                 let found = false;
+                // Scansiona tutto il calendario perché potresti aver spostato l'evento
+                for (const dateKey in this.events) {
+                    const initialLength = this.events[dateKey].length;
+                    // Rimuovi tutti gli eventi collegati a questo deadlineId
+                    this.events[dateKey] = this.events[dateKey].filter(e => e.deadlineId !== deadline.id);
 
-                if (dateKey && this.events[dateKey]) {
-                    const index = this.events[dateKey].findIndex(e => e.deadlineId === deadline.id);
-                    if (index !== -1) {
-                        this.events[dateKey].splice(index, 1);
-                        if (this.events[dateKey].length === 0) delete this.events[dateKey];
-                        found = true;
-                    }
-                }
+                    if (this.events[dateKey].length < initialLength) found = true;
 
-                // If not found (maybe date changed or data inconsistency), scan all events
-                if (!found) {
-                    for (const dKey in this.events) {
-                        const index = this.events[dKey].findIndex(e => e.deadlineId === deadline.id);
-                        if (index !== -1) {
-                            this.events[dKey].splice(index, 1);
-                            if (this.events[dKey].length === 0) delete this.events[dKey];
-                            found = true;
-                            break; // Assume one event per deadline
-                        }
-                    }
+                    if (this.events[dateKey].length === 0) delete this.events[dateKey];
                 }
 
                 if (found) {
@@ -1866,10 +1870,20 @@
             }
 
             openModalForEdit(dateKey, index) {
-                const event = this.events[dateKey][index]; this.openModal(dateKey); document.getElementById('modalTitle').textContent = 'Modifica Evento';
-                document.getElementById('eventTitle').value = event.title; document.getElementById('eventDescription').value = event.description || '';
+                const event = this.events[dateKey][index];
+
+                this.openModal(dateKey);
+                document.getElementById('modalTitle').textContent = 'Modifica Evento';
+                document.getElementById('eventTitle').value = event.title;
+                document.getElementById('eventDescription').value = event.description || '';
+
+
                 document.querySelector(`input[name="eventType"][value="${event.type}"]`).checked = true;
-                document.getElementById('editingEventKey').value = dateKey; document.getElementById('editingEventIndex').value = index;
+                document.getElementById('editingEventKey').value = dateKey;
+                document.getElementById('editingEventIndex').value = index;
+
+                // Se l'evento ha un deadlineId, lo salviamo nel campo nascosto, altrimenti lo puliamo
+                document.getElementById('editingDeadlineId').value = event.deadlineId || '';
             }
 
             closeModal() {
@@ -1883,18 +1897,36 @@
                 this.events[dateKey].push(newEvent); this.saveEvents(); this.renderCalendar();
             }
 
-            updateEvent(oldDateKey, index, newTitle, newDescription, newType, newDateKey) {
-                const eventToUpdate = { title: newTitle, description: newDescription, type: newType };
-                if (oldDateKey === newDateKey) { this.events[oldDateKey][index] = eventToUpdate; } else { this.events[oldDateKey].splice(index, 1); if (this.events[oldDateKey].length === 0) delete this.events[oldDateKey]; if (!this.events[newDateKey]) this.events[newDateKey] = []; this.events[newDateKey].push(eventToUpdate); }
+            updateEvent(oldDateKey, index, newTitle, newDescription, newType, newDateKey, deadlineId) {
+                const eventToUpdate = {
+                    title: newTitle,
+                    description: newDescription,
+                    type: newType,
+                    deadlineId: deadlineId ? parseInt(deadlineId) : undefined
+                };
+
+                if (oldDateKey === newDateKey) {
+                    this.events[oldDateKey][index] = eventToUpdate;
+                } else {
+                    this.events[oldDateKey].splice(index, 1);
+                    if (this.events[oldDateKey].length === 0) delete this.events[oldDateKey];
+                    if (!this.events[newDateKey]) this.events[newDateKey] = []; this.events[newDateKey].push(eventToUpdate);
+                }
+
                 this.saveEvents(); this.renderCalendar();
             }
 
             deleteEvent(evt, dateKey, index) {
-                evt.stopPropagation(); if (!this.events[dateKey]?.[index]) return;
+                evt.stopPropagation();
+                if (!this.events[dateKey]?.[index]) return;
+
                 const eventToDelete = this.events[dateKey][index];
+
                 this.lastDeletedEvent = { event: { ...eventToDelete }, dateKey: dateKey };
+
                 this.events[dateKey].splice(index, 1);
                 if (this.events[dateKey].length === 0) delete this.events[dateKey];
+
                 this.saveEvents();
                 this.renderCalendar();
                 this.hidePopover();
@@ -2029,11 +2061,22 @@
 
                 document.getElementById('eventForm').addEventListener('submit', (e) => {
                     e.preventDefault();
-                    const title = document.getElementById('eventTitle').value; const description = document.getElementById('eventDescription').value;
-                    const type = document.querySelector('input[name="eventType"]:checked').value; const date = document.getElementById('eventDate').value;
-                    const editingKey = document.getElementById('editingEventKey').value; const editingIndex = document.getElementById('editingEventIndex').value;
+                    const title = document.getElementById('eventTitle').value;
+                    const description = document.getElementById('eventDescription').value;
+                    const type = document.querySelector('input[name="eventType"]:checked').value;
+                    const date = document.getElementById('eventDate').value;
+                    const editingKey = document.getElementById('editingEventKey').value;
+                    const editingIndex = document.getElementById('editingEventIndex').value;
+
+                    // RECUPERA L'ID DEL DEADLINE
+                    const deadlineId = document.getElementById('editingDeadlineId').value;
+
                     if (title && date) {
-                        if (editingKey && editingIndex !== '') { this.updateEvent(editingKey, parseInt(editingIndex), title, description, type, date); } else { this.addEvent(title, description, type, date); }
+                        if (editingKey && editingIndex !== '') {
+                            this.updateEvent(editingKey, parseInt(editingIndex), title, description, type, date, deadlineId);
+                        } else {
+                            this.addEvent(title, description, type, date);
+                        }
                         this.closeModal();
                     }
                 });
