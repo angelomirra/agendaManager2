@@ -483,6 +483,26 @@
             border-left-color: #6c757d;
         }
 
+        /* Stile per indicare presenza di note: Angolo Piegato */
+        .event.has-notes::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            /* Dimensione del triangolo */
+            border-width: 0 8px 8px 0;
+            border-style: solid;
+            border-color: rgba(0, 0, 0, 0.15) white;
+            box-shadow: -1px 1px 2px rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Aggiustamento: quando passo il mouse e appare la X per cancellare, nascondiamo l'angolo per pulizia */
+        .event.has-notes:hover::before {
+            opacity: 0.2;
+        }
+
         .delete-event {
             position: absolute;
             right: 5px;
@@ -1740,14 +1760,18 @@
                     const typeIcons = { 'normal': 'bi-calendar4-event color-normal', 'urgent': 'bi-exclamation-triangle-fill color-urgent', 'pending': 'bi-hourglass-split color-pending', 'confirmed': 'bi-check-circle-fill color-confirmed', 'recurring': 'bi-arrow-repeat color-recurring' };
                     dayEvents.forEach((event, index) => {
                         const eventDiv = document.createElement('div');
-                        let finalClass = `event ${event.type}`; eventDiv.className = finalClass;
+                        let finalClass = `event ${event.type}`;
+
+                        // Se ha delle note, aggiungi la classe 'has-notes'
+                        if (event.description && event.description.trim() !== '') {
+                            finalClass += ' has-notes';
+                        }
+
+                        eventDiv.className = finalClass;
                         const eventIndex = this.events[dateKey].findIndex(e => e === event);
-                        let eventDescription = event.title ? event.title.charAt(0).toUpperCase() + event.title.slice(1) : '';
-                        eventDescription = this.truncateText(eventDescription);
-                        if (event.description && event.description.trim() !== '') { eventDescription += ' <i class="bi bi-chat" style="margin-left:2px; font-size:9px; opacity:0.9"></i>'; }
                         const iconClass = typeIcons[event.type] || 'bi-circle';
                         const iconHtml = `<i class="bi ${iconClass} event-type-icon"></i>`;
-                        eventDiv.innerHTML = `${iconHtml} ${eventDescription} <button class="delete-event" onclick="app.deleteEvent(event, '${dateKey}', ${eventIndex})">×</button>`;
+                        eventDiv.innerHTML = `${iconHtml} ${this.truncateText(event.title)} <button class="delete-event" onclick="app.deleteEvent(event, '${dateKey}', ${eventIndex})">×</button>`;
                         eventDiv.draggable = true;
 
                         eventDiv.addEventListener('dragstart', (e) => {
