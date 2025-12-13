@@ -1829,7 +1829,7 @@
                 container.appendChild(cell);
             }
 
-            truncateText(text, maxLen = 75) {
+            truncateText(text, maxLen = 53) {
                 if (!text) return '';
                 if (text.length <= maxLen) return text;
                 return text.slice(0, maxLen - 3).trimEnd() + '...';
