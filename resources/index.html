@@ -71,7 +71,6 @@
             justify-content: space-between;
             flex-wrap: nowrap;
             gap: 20px;
-            transition: all 0.3s ease-in-out;
             opacity: 1;
         }
 
@@ -2006,7 +2005,7 @@
                 document.getElementById('toggleSunday').addEventListener('change', async (e) => {
                     const isShowing = e.target.checked;
 
-                    // Se l'utente sta cercando di nascondere le domeniche (isShowing === false)
+                    // Se l'utente sta cercando di nascondere le domeniche 
                     if (!isShowing) {
                         let hasSundayEvents = false;
 
@@ -2216,7 +2215,11 @@
             const icon = document.querySelector('#headerToggleBtn i');
             const isHeaderCollapsed = await storageGet('agendaHeaderCollapsed') === 'true';
 
-            if (isHeaderCollapsed) { header.classList.add('collapsed'); icon.classList.remove('bi-chevron-compact-up'); icon.classList.add('bi-chevron-compact-down'); }
+            if (isHeaderCollapsed) {
+                header.classList.add('collapsed');
+                icon.classList.remove('bi-chevron-compact-up');
+                icon.classList.add('bi-chevron-compact-down');
+            }
 
             document.getElementById('headerToggleBtn').addEventListener('click', async () => {
                 header.classList.toggle('collapsed');
