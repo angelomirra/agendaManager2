@@ -1446,8 +1446,11 @@
                 const btnIcon = document.querySelector('#btnMainView i');
                 const btnText = document.getElementById('btnMainView');
                 const btnGoToToday = document.getElementById('floatingTodayBtn');
+                const bdgDeadlines = document.getElementById('deadlineBadge');
 
                 if (this.currentMainView === 'calendar') {
+
+                    bdgDeadlines.style.display = 'none';
 
                     // Hide Go to Today button
                     btnGoToToday.style.display = 'none';
@@ -1469,6 +1472,8 @@
                     document.getElementById('btnViewMode').style.display = 'none';
 
                 } else {
+
+                    bdgDeadlines.style.display = 'flex';
 
                     // Show Go to Today button
                     btnGoToToday.style.display = 'flex';
