@@ -1104,6 +1104,47 @@
         .btn-add-deadline:hover {
             background-color: #0284c7;
         }
+
+        /* Badge per pulsante scadenze */
+        .btn-badge-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .deadline-badge {
+            position: absolute;
+            top: -4px;
+            right: 4px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            font-size: 11px;
+            font-weight: 700;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            animation: badge-pulse 2s infinite;
+        }
+
+        .deadline-badge.hidden {
+            display: none;
+        }
+
+        @keyframes badge-pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
     </style>
 </head>
 
@@ -1144,10 +1185,13 @@
                 <button class="current-month" id="currentMonth"></button>
 
                 <!-- Pulsante Scadenziario -->
-                <button onclick="app.toggleMainView()" id="btnMainView" title="Mostra Scadenziario/Calendario"
-                    style="margin-right: 15px; background-color:#fff3cd; border-color:#e0a800;">
-                    <i class="bi bi-list-task"></i> Scadenze
-                </button>
+                <div class="btn-badge-container">
+                    <button onclick="app.toggleMainView()" id="btnMainView" title="Mostra Scadenziario/Calendario"
+                        style="margin-right: 15px; background-color:#fff3cd; border-color:#e0a800;">
+                        <i class="bi bi-list-task"></i> Scadenze
+                    </button>
+                    <span id="deadlineBadge" class="deadline-badge hidden">0</span>
+                </div>
             </div>
         </div>
 
@@ -1350,6 +1394,7 @@
 
                 // Check if deadlines exist, if not render empty
                 this.renderDeadlines();
+                this.updateDeadlineBadge();
             }
 
             setStartDateToCurrentWeek() {
@@ -1560,6 +1605,35 @@
                 }
             }
 
+            // --- BADGE COUNT LOGIC ---
+            updateDeadlineBadge() {
+                const badge = document.getElementById('deadlineBadge');
+                if (!badge) return;
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                let count = 0;
+
+                this.deadlines.forEach(item => {
+                    const startDate = new Date(item.startDate);
+                    startDate.setHours(0, 0, 0, 0);
+                    const endDate = new Date(item.dueDate);
+                    endDate.setHours(0, 0, 0, 0);
+
+                    // Conta solo se la data evento è già passata (o oggi)
+                    if (today >= startDate) {
+                        count++; // È in scadenza o scaduto
+                    }
+                });
+
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
             openDeadlineModal(id = null) {
                 const modal = document.getElementById('deadlineModal');
                 const form = document.getElementById('deadlineForm');
@@ -1619,6 +1693,7 @@
 
                 this.saveDeadlines();
                 this.renderDeadlines();
+                this.updateDeadlineBadge();
                 this.closeDeadlineModal();
             }
 
@@ -1631,6 +1706,7 @@
                     this.deadlines = this.deadlines.filter(d => d.id !== id);
                     this.saveDeadlines();
                     this.renderDeadlines();
+                    this.updateDeadlineBadge();
                 }
             }
 
