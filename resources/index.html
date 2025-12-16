@@ -889,7 +889,7 @@
             border-radius: 6px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
             padding: 15px 20px;
-            max-width: 350px;
+            max-width: 380px;
             word-wrap: break-word;
             font-size: 15px;
         }
@@ -1883,11 +1883,27 @@
                         eventDiv.draggable = true;
 
                         eventDiv.addEventListener('dragstart', (e) => {
-                            const eventData = { sourceKey: dateKey, sourceIndex: eventIndex }; this.draggedEventData = eventData;
-                            e.dataTransfer.setData('application/json', JSON.stringify(eventData)); e.dataTransfer.effectAllowed = 'move';
                             this.hidePopover();
-                            const ghost = eventDiv.cloneNode(true); ghost.style.position = 'absolute'; ghost.style.top = '-9999px'; ghost.style.left = '-9999px'; ghost.style.width = '290px'; ghost.style.zIndex = '10000'; ghost.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)'; ghost.style.opacity = '1'; document.body.appendChild(ghost); e.dataTransfer.setDragImage(ghost, 145, 25);
+
+                            const eventData = { sourceKey: dateKey, sourceIndex: eventIndex };
+                            this.draggedEventData = eventData;
+                            e.dataTransfer.setData('application/json', JSON.stringify(eventData));
+                            e.dataTransfer.effectAllowed = 'move';
+
+                            /*
+                            const ghost = eventDiv.cloneNode(true);
+                            ghost.style.position = 'absolute';
+                            ghost.style.top = '-9999px';
+                            ghost.style.left = '-9999px';
+                            ghost.style.width = '290px';
+                            ghost.style.zIndex = '10000';
+                            ghost.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+                            ghost.style.opacity = '1';
+                            document.body.appendChild(ghost);
+                            e.dataTransfer.setDragImage(ghost, 145, 25);
+                            
                             setTimeout(() => { if (document.body.contains(ghost)) { document.body.removeChild(ghost); } }, 0);
+                            */
                         });
                         eventDiv.addEventListener('dragend', () => { this.draggedEventData = null; });
                         eventDiv.addEventListener('click', (e) => {
@@ -2281,8 +2297,18 @@
 
                 calendarGrid.addEventListener('dragover', (e) => {
                     e.preventDefault(); if (this._scrollTimer) clearTimeout(this._scrollTimer);
-                    const rect = calendarGrid.getBoundingClientRect(); const hotZoneHeight = 20; const scrollDelay = 300;
-                    if (e.clientY > rect.bottom - hotZoneHeight) { this._scrollTimer = setTimeout(() => { this.nextWeek(); }, scrollDelay); } else if (e.clientY < rect.top + hotZoneHeight) { this._scrollTimer = setTimeout(() => { this.previousWeek(); }, scrollDelay); } else { if (this._scrollTimer) { clearTimeout(this._scrollTimer); this._scrollTimer = null; } }
+                    const rect = calendarGrid.getBoundingClientRect();
+                    const hotZoneHeight = 20;
+                    const scrollDelay = 300;
+
+                    if (e.clientY > rect.bottom - hotZoneHeight) {
+                        this._scrollTimer = setTimeout(() => { this.nextWeek(); }, scrollDelay);
+                    }
+                    else if (e.clientY < rect.top + hotZoneHeight) {
+                        this._scrollTimer = setTimeout(() => { this.previousWeek(); }, scrollDelay);
+                    } else {
+                        if (this._scrollTimer) { clearTimeout(this._scrollTimer); this._scrollTimer = null; }
+                    }
                 });
                 calendarGrid.addEventListener('dragleave', () => { if (this._scrollTimer) { clearTimeout(this._scrollTimer); this._scrollTimer = null; } });
             }
