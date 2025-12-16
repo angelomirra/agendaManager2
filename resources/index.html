@@ -874,6 +874,14 @@
             border-radius: 5px;
         }
 
+        .popover-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 3px;
+            font-size: 13px;
+            border-bottom: solid 1px #c7c6c6;
+        }
+
         #eventPopover {
             position: absolute;
             z-index: 1010;
@@ -1345,6 +1353,7 @@
     <div id="datePickerModal" style="display: none;"></div>
     <div id="eventPopover" style="display: none;">
         <div class="arrow"></div>
+        <div class="popover-title" style="display: none;"></div>
         <div class="popover-body"></div>
     </div>
 
@@ -1354,7 +1363,10 @@
 
 
     <script>
+        const MAX_TITLE_LENGTH = 53;
+
         class AgendaApp {
+
             constructor() {
                 this.viewStartDate = new Date();
                 this.datePickerDate = new Date();
@@ -1449,7 +1461,7 @@
                 const bdgDeadlines = document.getElementById('deadlineBadge');
 
                 if (this.currentMainView === 'calendar') {
-                    
+
                     // Hide Go to Today button
                     btnGoToToday.style.display = 'none';
 
@@ -1544,6 +1556,12 @@
                 if (!dateStr) return '';
                 return new Date(dateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
             };
+
+            truncateText(text, maxLen = MAX_TITLE_LENGTH) {
+                if (!text) return '';
+                if (text.length <= maxLen) return text;
+                return text.slice(0, maxLen - 3).trimEnd() + '...';
+            }
 
             // --- DEADLINES RENDER LOGIC ---
             renderDeadlines() {
@@ -1905,12 +1923,6 @@
                 container.appendChild(cell);
             }
 
-            truncateText(text, maxLen = 53) {
-                if (!text) return '';
-                if (text.length <= maxLen) return text;
-                return text.slice(0, maxLen - 3).trimEnd() + '...';
-            }
-
             hidePopover() {
                 if (this.popoverElement) { this.popoverElement.style.display = 'none'; }
             }
@@ -1918,25 +1930,53 @@
             showDescriptionPopover(event, targetElement) {
                 if (!event.description) return;
                 this.hidePopover();
+
+                const title = this.popoverElement.querySelector('.popover-title');
                 const body = this.popoverElement.querySelector('.popover-body');
                 const arrow = this.popoverElement.querySelector('.arrow');
+
                 arrow.style.top = '';
                 body.innerHTML = event.description.replace(/\n/g, '<br>');
+
+                if (event.title.length > MAX_TITLE_LENGTH) {
+                    title.innerHTML = event.title;
+                    title.style.display = 'block';
+                } else {
+                    title.style.display = 'none';
+                }
+                    
+
                 document.body.appendChild(this.popoverElement);
+
                 this.popoverElement.style.display = 'block';
                 this.popoverElement.style.top = '0px'; this.popoverElement.style.left = '0px';
+
                 const targetRect = targetElement.getBoundingClientRect();
                 const popoverRect = this.popoverElement.getBoundingClientRect(); const gap = 12;
-                let top, left; const spaceOnRight = window.innerWidth - targetRect.right;
+                let top, left;
+                const spaceOnRight = window.innerWidth - targetRect.right;
+
                 if (spaceOnRight > popoverRect.width + gap) {
                     left = targetRect.right + gap;
                     arrow.className = 'arrow left';
-                } else { left = targetRect.left - popoverRect.width - gap; arrow.className = 'arrow right'; }
+                }
+                else {
+                    left = targetRect.left - popoverRect.width - gap; arrow.className = 'arrow right';
+                }
+
                 top = targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2);
-                if (top < 10) { top = 10; } else if (top + popoverRect.height > window.innerHeight - 10) { top = window.innerHeight - popoverRect.height - 10; }
+                if (top < 10) {
+                    top = 10;
+                }
+                else if (top + popoverRect.height > window.innerHeight - 10) {
+                    top = window.innerHeight - popoverRect.height - 10;
+                }
+
                 const arrowTop = (targetRect.top + targetRect.height / 2) - top;
                 const safeArrowTop = Math.max(10, Math.min(popoverRect.height - 10, arrowTop));
+
                 arrow.style.top = `${safeArrowTop}px`; arrow.style.transform = 'translateY(-50%)';
+
                 this.popoverElement.style.top = `${top + window.scrollY}px`;
                 this.popoverElement.style.left = `${left + window.scrollX}px`;
             }
