@@ -1155,6 +1155,10 @@
                     spellcheck="false">
             </div>
             <div class="month-controls">
+
+                <!-- Pulsante MESE -->
+                <button class="current-month" id="currentMonth"></button>
+
                 <!-- Checkbox Giorni -->
                 <label class="day-toggle" title="Nascondi o mostra i sabati">
                     <input type="checkbox" id="toggleSaturday" checked><span>Sab</span>
@@ -1179,7 +1183,7 @@
                     <i class="bi bi-box-arrow-up"></i>
                 </button>
 
-                <button class="current-month" id="currentMonth"></button>
+
 
                 <!-- Pulsante Scadenziario -->
                 <div class="btn-badge-container">
@@ -1935,7 +1939,7 @@
                 } else {
                     title.style.display = 'none';
                 }
-                    
+
 
                 document.body.appendChild(this.popoverElement);
 
