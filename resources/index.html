@@ -166,6 +166,16 @@
             color: white;
         }
 
+        .month-controls .btn-mainView {
+            margin-right: 15px;
+            background-color: #fff3cd;
+            border-color: #e0a800;
+        }
+
+        .month-controls .btn-mainView:hover {
+            background-color: #ffeaa3;
+        }
+
         /* Checkbox Giorni (Sab/Dom) */
         .day-toggle {
             display: flex;
@@ -1187,8 +1197,8 @@
 
                 <!-- Pulsante Scadenziario -->
                 <div class="btn-badge-container">
-                    <button onclick="app.toggleMainView()" id="btnMainView" title="Mostra Scadenziario/Calendario"
-                        style="margin-right: 15px; background-color:#fff3cd; border-color:#e0a800;">
+                    <button onclick="app.toggleMainView()" class="btn-mainView" id="btnMainView"
+                        title="Mostra Scadenziario/Calendario">
                         <i class="bi bi-list-task"></i> Scadenze
                     </button>
                     <span id="deadlineBadge" class="deadline-badge hidden">0</span>
