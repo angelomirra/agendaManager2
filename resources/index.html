@@ -1735,9 +1735,11 @@
 
                 if (!this.events[dateKey]) this.events[dateKey] = [];
 
+                const descriptionText = deadline.notes ? `SCADENZA: ${this.formatDate(deadline.dueDate)}\n\n${deadline.notes || ''}` : `SCADENZA: ${this.formatDate(deadline.dueDate)}`;
+
                 const newEvent = {
-                    title: "SCA: " + deadline.desc, // Prefisso per distinguerlo visivamente
-                    description: `SCADENZA: ${this.formatDate(deadline.dueDate)}\n${deadline.notes || ''}`,
+                    title: "SCAD: " + deadline.desc, // Prefisso per distinguerlo visivamente
+                    description: descriptionText,
                     type: 'pending', // Giallo: da fare
                     deadlineId: deadline.id // Riferimento debole (serve solo se modifichi la scadenza padre)
                 };
