@@ -1892,7 +1892,7 @@
                             e.dataTransfer.setData('application/json', JSON.stringify(eventData));
                             e.dataTransfer.effectAllowed = 'move';
 
-                            /*
+
                             const ghost = eventDiv.cloneNode(true);
                             ghost.style.position = 'absolute';
                             ghost.style.top = '-9999px';
@@ -1903,9 +1903,9 @@
                             ghost.style.opacity = '1';
                             document.body.appendChild(ghost);
                             e.dataTransfer.setDragImage(ghost, 145, 25);
-                            
+
                             setTimeout(() => { if (document.body.contains(ghost)) { document.body.removeChild(ghost); } }, 0);
-                            */
+
                         });
                         eventDiv.addEventListener('dragend', () => { this.draggedEventData = null; });
                         eventDiv.addEventListener('click', (e) => {
@@ -1922,20 +1922,21 @@
                 }
 
                 // Scrolling handling...
-                eventsContainer.addEventListener('wheel', (e) => { 
-                    const c = e.currentTarget; 
-                    if (c.scrollHeight > c.clientHeight) { e.stopPropagation(); } 
+                eventsContainer.addEventListener('wheel', (e) => {
+                    const c = e.currentTarget;
+                    if (c.scrollHeight > c.clientHeight) { e.stopPropagation(); }
                 });
                 cell.appendChild(eventsContainer);
 
-                cell.addEventListener('dblclick', (e) => { if (e.target.closest('.event')) { return; } 
-                this.showQuickAddInput(cell, dateKey); 
-            });
+                cell.addEventListener('dblclick', (e) => {
+                    if (e.target.closest('.event')) { return; }
+                    this.showQuickAddInput(cell, dateKey);
+                });
 
                 cell._dragCounter = 0;
                 cell.addEventListener('dragenter', (e) => {
                     e.preventDefault();
-                    cell._dragCounter++; if (this.draggedEventData && this.draggedEventData.sourceKey === dateKey) return; 
+                    cell._dragCounter++; if (this.draggedEventData && this.draggedEventData.sourceKey === dateKey) return;
                     cell.classList.add('drag-over');
                 });
                 cell.addEventListener('dragleave', (e) => {
@@ -1948,8 +1949,8 @@
                 });
                 cell.addEventListener('drop', (e) => {
                     e.preventDefault(); cell._dragCounter = 0;
-                    cell.classList.remove('drag-over'); 
-                    const data = JSON.parse(e.dataTransfer.getData('application/json')); 
+                    cell.classList.remove('drag-over');
+                    const data = JSON.parse(e.dataTransfer.getData('application/json'));
                     if (data.sourceKey !== dateKey) this.moveEvent(data.sourceKey, data.sourceIndex, dateKey);
                 });
                 container.appendChild(cell);
@@ -2364,12 +2365,14 @@
             const events = JSON.parse(await storageGet('agendaEvents')) || {};
             let needsSave = false;
             for (const dateKey in events) {
-                events[dateKey].forEach(event => { if (typeof event.text !== 'undefined' && typeof event.title === 'undefined') { 
-                    event.title = event.text; 
-                    delete event.text; 
-                    event.description = ''; 
-                needsSave = true; } 
-            });
+                events[dateKey].forEach(event => {
+                    if (typeof event.text !== 'undefined' && typeof event.title === 'undefined') {
+                        event.title = event.text;
+                        delete event.text;
+                        event.description = '';
+                        needsSave = true;
+                    }
+                });
             }
             if (needsSave) { await storageSet('agendaEvents', JSON.stringify(events)); app.events = events; }
 
